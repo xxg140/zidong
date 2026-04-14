@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iOS批量自动拨号管理系统 - 专业版</title>
+    <title>iOS自动拨号</title>
     <style>
         :root {
             --primary: #007AFF;
@@ -383,11 +383,21 @@
         .contact-tag {
             margin-top: 5px;
         }
+        .countdown-timer {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .hangup-confirm-btn {
+            background: #FFA726;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📞 批量自动拨号管理系统 - 专业版</h1>
+        <h1>📞 批量自动拨号管理系统 - 挂断确认版</h1>
         
         <!-- 今日统计汇总 -->
         <div class="summary-section">
@@ -442,6 +452,7 @@
                 <li>CSV文件格式: 每行一个号码，支持带姓名 (姓名,号码)</li>
                 <li>可为每个号码添加标签，便于后续跟进</li>
                 <li>拨打统计信息按天记录，方便追踪进度</li>
+                <li><strong>重要:</strong> 每次拨打后，系统会等待您点击“挂断确认”，然后开始倒计时，倒计时结束后自动拨打下一个。</li>
             </ul>
         </div>
 
@@ -453,7 +464,9 @@
         let tasks = JSON.parse(localStorage.getItem('dialerTasks')) || [];
         let callStats = JSON.parse(localStorage.getItem('callStats')) || {};
         let defaultInterval = parseInt(localStorage.getItem('defaultInterval')) || 30;
-        let activeTimers = {};
+        let activeTimers = {}; // 存储所有活动定时器
+        let countdownTimers = {}; // 存储倒计时定时器
+        let hangupConfirmationTimers = {}; // 存储挂断确认超时定时器
 
         // --- DOM 元素 ---
         const newTaskNameEl = document.getElementById('newTaskName');
@@ -471,6 +484,7 @@
         function parseCSV(csvText) {
             const lines = csvText.split('\n');
             const numbers = [];
+            const seenNumbers = new Set(); // 用于去重
             
             lines.forEach(line => {
                 line = line.trim();
@@ -480,33 +494,55 @@
                     const parts = line.split(',');
                     if (parts.length >= 2) {
                         const name = parts[0].trim();
-                        const number = parts[1].trim();
-                        if (number) {
+                        // 提取号码部分并过滤非数字字符
+                        const rawNumber = parts[1].trim();
+                        const number = extractPhoneNumber(rawNumber);
+                        
+                        if (number && !seenNumbers.has(number)) {
+                            seenNumbers.add(number);
                             numbers.push({ 
                                 name, 
                                 number, 
                                 status: 'pending', 
                                 retryCount: 0, 
                                 lastCallTime: null,
-                                tag: 'default' // 新增：默认标签
+                                tag: 'default'
                             });
                         }
                     }
                 } else {
-                    const number = line.replace(/[^\d\-+\(\)\s]/g, '').trim();
-                    if (number) {
+                    // 直接处理纯号码行
+                    const number = extractPhoneNumber(line);
+                    if (number && !seenNumbers.has(number)) {
+                        seenNumbers.add(number);
                         numbers.push({ 
                             number, 
                             status: 'pending', 
                             retryCount: 0, 
                             lastCallTime: null,
-                            tag: 'default' // 新增：默认标签
+                            tag: 'default'
                         });
                     }
                 }
             });
             
             return numbers;
+        }
+
+        // 从字符串中提取手机号码
+        function extractPhoneNumber(str) {
+            // 匹配手机号模式 (1开头的11位数字) 或 固定电话模式 (\d-\d 或 \d\d-\d)
+            const phoneRegex = /1[3-9]\d{9}|(?:\d{3,4}-?)?\d{7,8}/;
+            const match = str.match(phoneRegex);
+            if (match) {
+                // 清理号码，移除非数字字符
+                let cleaned = match[0].replace(/[^\d-+]/g, '');
+                // 确保是有效长度的号码
+                if (cleaned.length >= 7 && cleaned.length <= 15) {
+                    return cleaned;
+                }
+            }
+            return null; // 不是有效号码则返回null
         }
 
         function downloadCSVTemplate() {
@@ -583,7 +619,8 @@
                 isActive: false,
                 isPaused: false,
                 currentDialIndex: 0,
-                interval: interval
+                interval: interval,
+                isWaitingHangup: false // 新增状态：是否在等待挂断
             };
 
             tasks.push(newTask);
@@ -606,7 +643,7 @@
                 const reader = new FileReader();
                 reader.onload = e => {
                     const csvText = e.target.result;
-                    const parsedContacts = parseCSV(csvText);
+                    const parsedContacts = parseCSV(csvText); // 自动去重和过滤
 
                     const taskIndex = tasks.findIndex(t => t.id === taskId);
                     if (taskIndex === -1) {
@@ -614,14 +651,11 @@
                         return;
                     }
 
-                    const existingNumbers = new Set(tasks[taskIndex].contacts.map(c => c.number));
-                    const newContacts = parsedContacts.filter(c => !existingNumbers.has(c.number));
-
-                    tasks[taskIndex].contacts.push(...newContacts);
+                    tasks[taskIndex].contacts.push(...parsedContacts);
                     saveTasksToStorage();
                     renderTaskList();
 
-                    showStatus(`成功为任务 "${tasks[taskIndex].name}" 导入了 ${newContacts.length} 个新号码`, 'info');
+                    showStatus(`成功为任务 "${tasks[taskIndex].name}" 导入了 ${parsedContacts.length} 个号码 (已自动去重和过滤)`, 'info');
                 };
                 reader.readAsText(file);
             };
@@ -632,7 +666,7 @@
             const numbers = prompt("请输入要追加的号码 (每行一个):");
             if (!numbers) return;
 
-            const parsedContacts = parseCSV(numbers);
+            const parsedContacts = parseCSV(numbers); // 自动去重和过滤
 
             const taskIndex = tasks.findIndex(t => t.id === taskId);
             if (taskIndex === -1) {
@@ -640,14 +674,11 @@
                 return;
             }
 
-            const existingNumbers = new Set(tasks[taskIndex].contacts.map(c => c.number));
-            const newContacts = parsedContacts.filter(c => !existingNumbers.has(c.number));
-
-            tasks[taskIndex].contacts.push(...newContacts);
+            tasks[taskIndex].contacts.push(...parsedContacts);
             saveTasksToStorage();
             renderTaskList();
 
-            showStatus(`成功向任务 "${tasks[taskIndex].name}" 追加了 ${newContacts.length} 个号码`, 'info');
+            showStatus(`成功向任务 "${tasks[taskIndex].name}" 追加了 ${parsedContacts.length} 个号码 (已自动去重和过滤)`, 'info');
         }
 
         function renderTaskList() {
@@ -670,10 +701,12 @@
                 taskCard.setAttribute('data-task-id', task.id);
 
                 let dialButtonLabel = '开始拨号';
-                if (task.isActive && !task.isPaused) {
+                if (task.isActive && !task.isPaused && !task.isWaitingHangup) {
                     dialButtonLabel = '正在拨号...';
                 } else if (task.isPaused) {
                     dialButtonLabel = '恢复拨号';
+                } else if (task.isWaitingHangup) {
+                    dialButtonLabel = '等待挂断...'; // 新增状态
                 }
 
                 taskCard.innerHTML = `
@@ -689,12 +722,13 @@
                         <button class="btn-primary task-action-btn" data-action="import" data-task-id="${task.id}">导入数据</button>
                         <button class="btn-secondary task-action-btn" data-action="append" data-task-id="${task.id}">追加号码</button>
                         <button class="btn-success task-action-btn" data-action="start-dial" data-task-id="${task.id}">${dialButtonLabel}</button>
-                        <button class="btn-warning task-action-btn" data-action="pause-dial" data-task-id="${task.id}" ${!task.isActive || task.isPaused ? 'disabled' : ''}>${task.isPaused ? '恢复' : '暂停'}</button>
+                        <button class="btn-warning task-action-btn" data-action="pause-dial" data-task-id="${task.id}" ${!task.isActive || task.isPaused || task.isWaitingHangup ? 'disabled' : ''}>${task.isPaused ? '恢复' : '暂停'}</button>
                         <button class="btn-danger task-action-btn" data-action="reset" data-task-id="${task.id}">重置任务</button>
                         <button class="btn-danger task-action-btn" data-action="delete" data-task-id="${task.id}">删除任务</button>
                     </div>
                     <div class="dialing-status" id="dialing-status-${task.id}">
-                        ${task.isPaused ? '拨号已暂停' : task.isActive ? '正在运行...' : '就绪'}
+                        ${task.isPaused ? '拨号已暂停' : task.isWaitingHangup ? '等待挂断确认后开始倒计时' : task.isActive ? '正在运行...' : '就绪'}
+                        ${task.countdownTimer && task.countdownSeconds > 0 ? `<span class="countdown-timer">等待 ${task.countdownSeconds}s 后拨打</span>` : ''}
                     </div>
                     <div class="contact-list" id="contactList-${task.id}">
                         ${task.contacts.length === 0 
@@ -731,7 +765,6 @@
                                     `;
                                 }
                                 
-                                // 生成标签HTML
                                 let tagHtml = '';
                                 if (contact.tag && contact.tag !== 'default') {
                                     let tagColor = 'default';
@@ -769,6 +802,8 @@
                                                 <option value="unpassed" ${contact.tag === 'unpassed' ? 'selected' : ''}>微信未通过</option>
                                                 <option value="no" ${contact.tag === 'no' ? 'selected' : ''}>不需要</option>
                                             </select>
+                                            ${task.isWaitingHangup && task.currentDialIndex === index ? 
+                                                `<button class="btn-warning hangup-confirm-btn" data-action="confirm-hangup" data-task-id="${task.id}" data-contact-index="${index}">确认已挂断</button>` : ''}
                                         </div>
                                     </div>
                                 `;
@@ -780,7 +815,7 @@
             });
         }
 
-        // --- 拨号逻辑 ---
+        // --- 拨号逻辑 (修改) ---
         function startBatchDialForTask(taskId) {
             const taskIndex = tasks.findIndex(t => t.id === taskId);
             if (taskIndex === -1) {
@@ -799,7 +834,14 @@
                 task.isPaused = false;
                 if (task.currentDialIndex < task.contacts.length) {
                     showStatus(`恢复任务 "${task.name}" 拨号...`, 'info');
-                    nextCallInTask(taskId, task.currentDialIndex);
+                    // 如果有剩余的倒计时，继续
+                    if (task.countdownTimer) {
+                        continueCountdown(taskId);
+                    } else if (task.isWaitingHangup) {
+                         // 如果在等待挂断，不执行任何操作
+                    } else {
+                        nextCallInTask(taskId, task.currentDialIndex);
+                    }
                 } else {
                     showStatus('任务已完成或没有待拨打号码', 'info');
                 }
@@ -807,7 +849,7 @@
                 return;
             }
 
-            if (task.isActive && !task.isPaused) {
+            if (task.isActive && !task.isPaused && !task.isWaitingHangup) {
                 showStatus('此任务的拨号已在运行中', 'info');
                 return;
             }
@@ -817,12 +859,14 @@
                 showStatus('此任务中没有待拨打的号码', 'info');
                 task.isActive = false;
                 task.isPaused = false;
+                task.isWaitingHangup = false;
                 renderTaskList();
                 return;
             }
 
             task.isActive = true;
             task.isPaused = false;
+            task.isWaitingHangup = false; // 确保初始状态为非等待挂断
             task.currentDialIndex = startIndex;
             
             showStatus(`开始为任务 "${task.name}" 批量拨号...`, 'info');
@@ -841,10 +885,24 @@
 
             task.isPaused = true;
             task.isActive = false;
+            task.isWaitingHangup = false; // 暂停时也清除等待挂断状态
 
             if (activeTimers[taskId]) {
                 clearTimeout(activeTimers[taskId]);
                 delete activeTimers[taskId];
+            }
+            
+            // 如果有正在进行的倒计时，也取消
+            if (task.countdownTimer) {
+                 clearInterval(task.countdownTimer);
+                 delete task.countdownTimer;
+                 task.countdownSeconds = 0;
+            }
+            
+            // 如果有挂断确认超时定时器，也取消
+            if (hangupConfirmationTimers[taskId]) {
+                 clearTimeout(hangupConfirmationTimers[taskId]);
+                 delete hangupConfirmationTimers[taskId];
             }
 
             saveTasksToStorage();
@@ -872,6 +930,7 @@
             if (nextIndex === -1) {
                 task.isActive = false;
                 task.isPaused = false;
+                task.isWaitingHangup = false;
                 showStatus(`任务 "${task.name}" 拨号完成`, 'info');
                 saveTasksToStorage();
                 renderTaskList();
@@ -880,11 +939,8 @@
 
             task.currentDialIndex = nextIndex;
             makeCallInTask(taskId, nextIndex);
-            
-            const interval = task.interval;
-            activeTimers[taskId] = setTimeout(() => {
-                nextCallInTask(taskId, nextIndex + 1);
-            }, interval * 1000);
+            // 拨打后进入等待挂断状态
+            enterHangupWaitState(taskId, nextIndex);
         }
 
         function makeCallInTask(taskId, contactIndex) {
@@ -897,7 +953,7 @@
             const contact = task.contacts[contactIndex];
             if (!contact) return;
 
-            if (task.isPaused) return;
+            if (task.isPaused || task.isWaitingHangup) return;
 
             try {
                 window.location.href = `tel:${contact.number}`;
@@ -922,6 +978,91 @@
                 renderTaskList();
                 showStatus(`拨号失败: ${contact.number}`, 'warning');
             }
+        }
+
+        // 新增：进入挂断等待状态
+        function enterHangupWaitState(taskId, currentCallIndex) {
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            if (taskIndex === -1) return;
+            
+            const task = tasks[taskIndex];
+            task.isWaitingHangup = true;
+            
+            // 设置一个超时，如果长时间没有确认挂断，则提醒用户
+            hangupConfirmationTimers[taskId] = setTimeout(() => {
+                showStatus(`任务 "${task.name}" 需要确认挂断才能继续`, 'warning');
+            }, 60000); // 1分钟后提醒
+            
+            saveTasksToStorage();
+            renderTaskList();
+        }
+        
+        // 新增：确认挂断，开始倒计时
+        function confirmHangupAndStartTimer(taskId) {
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            if (taskIndex === -1) return;
+            
+            const task = tasks[taskIndex];
+            if (!task.isWaitingHangup) return;
+            
+            // 清除挂断确认超时定时器
+            if (hangupConfirmationTimers[taskId]) {
+                clearTimeout(hangupConfirmationTimers[taskId]);
+                delete hangupConfirmationTimers[taskId];
+            }
+            
+            task.isWaitingHangup = false; // 退出等待挂断状态
+            showStatus(`确认挂断，开始倒计时 ${task.interval} 秒后拨打下一个`, 'info');
+            
+            // 开始倒计时
+            startCountdownForNextCall(taskId, task.currentDialIndex + 1);
+        }
+
+        // 新增：启动倒计时函数
+        function startCountdownForNextCall(taskId, nextIndex) {
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            if (taskIndex === -1) return;
+            
+            const task = tasks[taskIndex];
+            if (!task.isActive || task.isPaused) return;
+            
+            let remainingTime = task.interval;
+            task.countdownSeconds = remainingTime;
+            
+            // 更新UI显示倒计时
+            renderTaskList();
+            
+            // 设置倒计时
+            task.countdownTimer = setInterval(() => {
+                remainingTime--;
+                task.countdownSeconds = remainingTime;
+                
+                // 更新UI
+                renderTaskList();
+                
+                if (remainingTime <= 0) {
+                    clearInterval(task.countdownTimer);
+                    delete task.countdownTimer;
+                    task.countdownSeconds = 0;
+                    
+                    // 倒计时结束，继续拨打下一个
+                    if (task.isActive && !task.isPaused && !task.isWaitingHangup) {
+                        nextCallInTask(taskId, nextIndex);
+                    }
+                }
+            }, 1000);
+        }
+        
+        // 新增：继续倒计时函数（用于暂停后恢复）
+        function continueCountdown(taskId) {
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            if (taskIndex === -1) return;
+            
+            const task = tasks[taskIndex];
+            if (!task.isActive || task.isPaused || !task.countdownTimer) return;
+            
+            // 重新设置倒计时
+            startCountdownForNextCall(taskId, task.currentDialIndex + 1);
         }
 
         function dialContactManually(taskId, number) {
@@ -982,17 +1123,28 @@
                 status: 'pending',
                 retryCount: 0,
                 lastCallTime: null,
-                tag: contact.tag || 'default' // 保留原有标签
+                tag: contact.tag || 'default'
             }));
             task.isActive = false;
             task.isPaused = false;
+            task.isWaitingHangup = false;
             task.currentDialIndex = 0;
-
+            
+            // 清除所有相关定时器
             if (activeTimers[taskId]) {
                 clearTimeout(activeTimers[taskId]);
                 delete activeTimers[taskId];
             }
-            
+            if (task.countdownTimer) {
+                clearInterval(task.countdownTimer);
+                delete task.countdownTimer;
+                task.countdownSeconds = 0;
+            }
+            if (hangupConfirmationTimers[taskId]) {
+                clearTimeout(hangupConfirmationTimers[taskId]);
+                delete hangupConfirmationTimers[taskId];
+            }
+
             saveTasksToStorage();
             renderTaskList();
             showStatus(`任务 "${task.name}" 已重置`, 'info');
@@ -1006,6 +1158,14 @@
                 if (activeTimers[taskId]) {
                     clearTimeout(activeTimers[taskId]);
                     delete activeTimers[taskId];
+                }
+                if (tasks[taskIndex].countdownTimer) {
+                     clearInterval(tasks[taskIndex].countdownTimer);
+                     delete tasks[taskIndex].countdownTimer;
+                }
+                if (hangupConfirmationTimers[taskId]) {
+                    clearTimeout(hangupConfirmationTimers[taskId]);
+                    delete hangupConfirmationTimers[taskId];
                 }
                 tasks.splice(taskIndex, 1);
                 saveTasksToStorage();
@@ -1083,6 +1243,9 @@
                     case 'remove':
                         removeFailedContact(taskId, contactIndex);
                         break;
+                    case 'confirm-hangup': // 新增：确认挂断动作
+                        confirmHangupAndStartTimer(taskId);
+                        break;
                 }
                 return;
             }
@@ -1101,6 +1264,12 @@
                     const taskIndex = tasks.findIndex(t => t.id === taskId);
                     if (taskIndex !== -1) {
                         tasks[taskIndex].interval = newInterval;
+                        // 如果任务正在进行倒计时，则更新倒计时时间
+                        if (tasks[taskIndex].isActive && tasks[taskIndex].countdownTimer) {
+                            clearInterval(tasks[taskIndex].countdownTimer);
+                            tasks[taskIndex].countdownSeconds = newInterval;
+                            startCountdownForNextCall(taskId, tasks[taskIndex].currentDialIndex + 1);
+                        }
                         saveTasksToStorage();
                         showStatus(`任务 "${tasks[taskIndex].name}" 间隔时间已更新为 ${newInterval} 秒`, 'info');
                     }
