@@ -105,6 +105,7 @@ function setupEventListeners() {
   document.getElementById('closeTaskDetailBtn').addEventListener('click', () => closeModal('taskDetailModal'));
   document.getElementById('reAddAllBtn').addEventListener('click', reAddAllContacts);
   document.getElementById('createFailedTaskBtn').addEventListener('click', createFailedTask);
+  document.querySelectorAll('.detail-tab').forEach(btn => btn.addEventListener('click', () => switchDetailTab(btn.dataset.detailTab)));
   document.getElementById('selectContactsBtn').addEventListener('click', openContactPicker);
   document.getElementById('confirmSelectionBtn').addEventListener('click', confirmSelection);
   document.getElementById('pickerSearch').addEventListener('input', renderPickerContacts);
@@ -540,6 +541,7 @@ function renderTasks() {
           <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${called} / ${task.total} (${prog}%)</div>
         </div>
         <div class="task-actions">
+          ${pending > 0 ? `<button class="btn btn-primary" onclick="dialFirstPending('${task.id}')" style="font-size:14px;padding:8px 20px;">📞 拨打</button>` : ''}
           ${called > 0 ? `<button class="btn btn-secondary" onclick="openDetailAndReset('${task.id}')" style="font-size:13px;padding:6px 12px;">🔄 重置全部</button>` : ''}
           ${notAnswered > 0 ? `<button class="btn btn-warning" onclick="openDetailAndCreateFailed('${task.id}')" style="font-size:13px;padding:6px 12px;">📋 未接通生成</button>` : ''}
         </div>
@@ -731,30 +733,64 @@ function deleteTask(id) {
 
 // ========== 任务详情 ==========
 let currentDetailTask = null;
+let currentDetailTab = 'pending';
 
 function openTaskDetail(id) {
   const task = state.tasks.find(t => t.id == id);
   if (!task) return;
   currentDetailTask = task;
+  currentDetailTab = 'pending';
   document.getElementById('taskDetailTitle').textContent = task.name;
+  // 重置Tab激活
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.detail-tab[data-detail-tab="pending"]').classList.add('active');
+  updateDetailCounts(task);
   renderTaskDetailList(task);
   openModal('taskDetailModal');
 }
 
+function updateDetailCounts(task) {
+  const pending = task.contacts.filter(x => x.dialStatus === 'pending').length;
+  const called = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering').length;
+  const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
+  document.getElementById('detailPendingCount').textContent = pending;
+  document.getElementById('detailCalledCount').textContent = called;
+  document.getElementById('detailConnectedCount').textContent = connected;
+}
+
 function renderTaskDetailList(task) {
+  updateDetailCounts(task);
   const c = document.getElementById('taskDetailList');
-  if (!task.contacts.length) {
-    c.innerHTML = '<div style="text-align:center;padding:40px;color:#8E8E93;">暂无联系人</div>';
+  let filtered = [];
+  if (currentDetailTab === 'pending') {
+    filtered = task.contacts.filter(x => x.dialStatus === 'pending');
+  } else if (currentDetailTab === 'called') {
+    filtered = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering');
+  } else if (currentDetailTab === 'connected') {
+    filtered = task.contacts.filter(x => x.dialStatus === 'connected');
+  }
+  if (!filtered.length) {
+    const msgs = { pending: '没有待拨打的号码', called: '没有已拨打未接通的号码', connected: '没有已接通的号码' };
+    c.innerHTML = `<div style="text-align:center;padding:40px;color:#8E8E93;"><div style="font-size:40px;margin-bottom:12px;">📭</div><p>${msgs[currentDetailTab]}</p></div>`;
     return;
   }
-  c.innerHTML = task.contacts.map((x, idx) => `
-    <div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #E5E5EA;gap:12px;">
+  c.innerHTML = filtered.map((x, idx) => {
+    const origIdx = task.contacts.indexOf(x);
+    return `<div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #E5E5EA;gap:12px;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:15px;font-weight:600;color:#1C1C1E;">${x.name || x.phone}</div>
         <div style="font-size:13px;color:#8E8E93;margin-top:2px;">${x.phone}</div>
       </div>
-      <button class="btn btn-primary" onclick="dialFromDetail('${task.id}', ${idx})" style="padding:8px 20px;font-size:14px;white-space:nowrap;">📞 拨打</button>
-    </div>`).join('');
+      <button class="btn btn-primary" onclick="dialFromDetail('${task.id}', ${origIdx})" style="padding:8px 20px;font-size:14px;white-space:nowrap;">📞 拨打</button>
+    </div>`;
+  }).join('');
+}
+
+function switchDetailTab(tab) {
+  currentDetailTab = tab;
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.detail-tab[data-detail-tab="${tab}"]`).classList.add('active');
+  renderTaskDetailList(currentDetailTask);
 }
 
 function dialFromDetail(taskId, idx) {
@@ -763,6 +799,16 @@ function dialFromDetail(taskId, idx) {
   const c = task.contacts[idx];
   window.location.href = `tel:${c.phone}`;
   showToast(`正在拨打：${c.name || c.phone}`, 'info');
+}
+
+// 找到第一个待拨打的联系人并拨打
+function dialFirstPending(id) {
+  const task = state.tasks.find(t => t.id == id);
+  if (!task) return;
+  const first = task.contacts.find(x => x.dialStatus === 'pending');
+  if (!first) { showToast('没有待拨打的号码了', 'warning'); return; }
+  const idx = task.contacts.indexOf(first);
+  dialFromDetail(task.id, idx);
 }
 
 // 从卡片触发：打开详情并重置
