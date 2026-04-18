@@ -350,22 +350,14 @@ function handleFileImport(e) {
         return;
       }
     } catch(ex) {}
-    // UTF-8 解不出"电话"，尝试 GBK（Excel 中文 Windows 默认编码）
+    // UTF-8 解不出"电话"，尝试 gb18030（iOS Safari 标准名称，覆盖 GBK）
     try {
-      text = new TextDecoder('gbk').decode(buffer);
+      text = new TextDecoder('gb18030').decode(buffer);
       if (/电话/.test(text)) {
         parseImportFile(text, file.name);
         return;
       }
     } catch(ex) {}
-    // 还不行尝试 GB2312
-    try {
-      text = new TextDecoder('gb2312').decode(buffer);
-      if (/电话/.test(text)) {
-        parseImportFile(text, file.name);
-        return;
-      }
-    } catch(ex2) {}
     // 都失败，尝试去掉 BOM
     const bytes = new Uint8Array(buffer);
     if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
