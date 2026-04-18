@@ -508,8 +508,6 @@ function renderTasks() {
     const pending = task.contacts.filter(x => x.dialStatus === 'pending').length;
     const prog = task.total > 0 ? Math.round((called / task.total) * 100) : 0;
     const modeLabel = task.mode === 'manual' ? '🔖 手动确认' : '⚡ 自动';
-    const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
-    const notAnswered = called - connected;
     // 当前拨打信息（无论是否自动运行，只要在拨打就显示）
     const dialInfo = task.currentDialing;
     const dialInfoHtml = (dialInfo) ? `
@@ -531,8 +529,7 @@ function renderTasks() {
           <span>${modeLabel}</span>
         </div>
         <div class="task-status-summary">
-          <span class="status-badge success">✅已接通 ${connected}</span>
-          <span class="status-badge warning">📞已拨打 ${notAnswered}</span>
+          <span class="status-badge warning">📞已拨打 ${called}</span>
           <span class="status-badge gray">○待拨打 ${pending}</span>
         </div>
         ${dialInfoHtml}
@@ -542,8 +539,6 @@ function renderTasks() {
         </div>
         <div class="task-actions">
           ${pending > 0 ? `<button class="btn btn-primary" onclick="event.stopPropagation();dialFirstPending('${task.id}')" style="font-size:14px;padding:8px 20px;">📞 拨打</button>` : ''}
-          ${called > 0 ? `<button class="btn btn-secondary" onclick="openDetailAndReset('${task.id}')" style="font-size:13px;padding:6px 12px;">🔄 重置全部</button>` : ''}
-          ${notAnswered > 0 ? `<button class="btn btn-warning" onclick="openDetailAndCreateFailed('${task.id}')" style="font-size:13px;padding:6px 12px;">📋 未接通生成</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -753,11 +748,9 @@ function openTaskDetail(id) {
 
 function updateDetailCounts(task) {
   const pending = task.contacts.filter(x => x.dialStatus === 'pending').length;
-  const called = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering').length;
-  const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
+  const called = task.contacts.filter(x => x.dialStatus !== 'pending').length;
   document.getElementById('detailPendingCount').textContent = pending;
   document.getElementById('detailCalledCount').textContent = called;
-  document.getElementById('detailConnectedCount').textContent = connected;
 }
 
 function renderTaskDetailList(task) {
@@ -766,23 +759,23 @@ function renderTaskDetailList(task) {
   let filtered = [];
   if (currentDetailTab === 'pending') {
     filtered = task.contacts.filter(x => x.dialStatus === 'pending');
-  } else if (currentDetailTab === 'called') {
-    filtered = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering');
-  } else if (currentDetailTab === 'connected') {
-    filtered = task.contacts.filter(x => x.dialStatus === 'connected');
+  } else {
+    filtered = task.contacts.filter(x => x.dialStatus !== 'pending');
   }
   if (!filtered.length) {
-    const msgs = { pending: '没有待拨打的号码', called: '没有已拨打未接通的号码', connected: '没有已接通的号码' };
+    const msgs = { pending: '没有待拨打的号码', called: '没有已拨打的号码' };
     c.innerHTML = `<div style="text-align:center;padding:40px;color:#8E8E93;"><div style="font-size:40px;margin-bottom:12px;">📭</div><p>${msgs[currentDetailTab]}</p></div>`;
     return;
   }
   c.innerHTML = filtered.map((x, idx) => {
     const origIdx = task.contacts.indexOf(x);
+    const statusLabel = x.dialStatus === 'pending' ? '○待拨打' : '📞已拨打';
     return `<div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #E5E5EA;gap:12px;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:15px;font-weight:600;color:#1C1C1E;">${x.name || x.phone}</div>
         <div style="font-size:13px;color:#8E8E93;margin-top:2px;">${x.phone}</div>
       </div>
+      <span style="font-size:12px;color:#8E8E93;">${statusLabel}</span>
       <button class="btn btn-primary" onclick="dialFromDetail('${task.id}', ${origIdx})" style="padding:8px 20px;font-size:14px;white-space:nowrap;">📞 拨打</button>
     </div>`;
   }).join('');
@@ -799,10 +792,13 @@ function dialFromDetail(taskId, idx) {
   const task = state.tasks.find(t => t.id == taskId);
   if (!task || !task.contacts[idx]) return;
   const c = task.contacts[idx];
+  // 标记为已拨打
+  task.contacts[idx].dialStatus = 'called';
+  task.contacts[idx].dialedAt = new Date().toISOString();
   // 在卡片上显示正在拨打
   task.currentDialing = { name: c.name, phone: c.phone, note: c.note || '' };
   task.status = 'running';
-  DB.update(DB.tasks, task.id, { currentDialing: task.currentDialing, status: 'running' });
+  DB.update(DB.tasks, task.id, { contacts: task.contacts, currentDialing: task.currentDialing, status: 'running' });
   state.tasks = DB.get(DB.tasks);
   renderTasks();
   window.location.href = `tel:${c.phone}`;
