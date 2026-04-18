@@ -1353,80 +1353,28 @@ form {
 .toast.error { background: var(--danger); }
 .toast.warning { background: var(--warning); }
 
-/* ========== 浮动面板 ========== */
-.floating-panel {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 320px;
-  background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-  z-index: 1000;
-  overflow: hidden;
-}
-
-.floating-header {
-  background: var(--primary);
-  color: white;
-  padding: 12px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.floating-title {
-  font-weight: 600;
-}
-
-.floating-close {
+/* ========== 任务卡片大按钮 ========== */
+.btn-big-next {
+  width: 100%;
+  padding: 18px 16px;
   border: none;
-  background: rgba(255,255,255,0.2);
+  border-radius: var(--radius);
+  background: #34C759;
   color: white;
-  padding: 4px 12px;
-  border-radius: 4px;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
-  font-size: 12px;
-}
-
-.floating-close:hover {
-  background: rgba(255,255,255,0.3);
-}
-
-.floating-content {
-  padding: 16px;
-}
-
-.floating-progress {
-  margin-bottom: 12px;
-}
-
-.progress-text {
   text-align: center;
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(52,199,89,0.35);
+  transition: all 0.2s;
+  margin-top: 4px;
 }
 
-.progress-bar {
-  height: 8px;
-  background: var(--light-gray);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 4px;
-  transition: width 0.3s;
-  width: 0%;
-}
-
-.floating-current {
-  text-align: center;
-  font-size: 13px;
-  color: var(--text-secondary);
+.btn-big-next:active {
+  background: #2DB148;
+  transform: scale(0.98);
+  box-shadow: 0 2px 6px rgba(52,199,89,0.3);
 }
 
 /* ========== 已选联系人标签 ========== */
