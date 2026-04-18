@@ -507,11 +507,6 @@ function renderTasks() {
     const modeLabel = task.mode === 'manual' ? '🔖 手动确认' : '⚡ 自动';
     const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
     const notAnswered = called - connected;
-    const statusDots = task.contacts.map(x => {
-      if (x.dialStatus === 'connected') return '<span style="color:#34C759;font-size:11px;">●</span>';
-      if (x.dialStatus === 'called' || x.dialStatus === 'not_answering') return '<span style="color:#FF9500;font-size:11px;">●</span>';
-      return '<span style="color:#C7C7CC;font-size:11px;">○</span>';
-    }).join('');
     // 当前拨打信息
     const dialInfo = task.currentDialing;
     const dialInfoHtml = (task.status === 'running' && dialInfo) ? `
@@ -538,7 +533,6 @@ function renderTasks() {
           <span class="status-badge gray">○待拨打 ${pending}</span>
         </div>
         ${dialInfoHtml}
-        <div class="task-dots-row" title="●已接通 ●已拨打 ○待拨打">${statusDots}</div>
         <div class="task-progress">
           <div class="task-progress-bar"><div class="task-progress-fill" style="width:${prog}%"></div></div>
           <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${called} / ${task.total} (${prog}%)</div>
