@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AutoDialer - 智能自动拨号系统</title>
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
   <header class="app-header">
@@ -249,6 +249,10 @@
         <h3>📋 <span id="taskDetailTitle"></span></h3>
         <button class="modal-close" id="closeTaskDetailBtn">×</button>
       </div>
+      <div class="task-detail-actions">
+        <button class="btn btn-secondary" id="reAddAllBtn">🔄 重置全部</button>
+        <button class="btn btn-warning" id="createFailedTaskBtn">📋 未接通生成</button>
+      </div>
       <div id="taskDetailList" style="padding:16px;"></div>
     </div>
   </div>
@@ -349,6 +353,6 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
