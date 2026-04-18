@@ -536,12 +536,12 @@ function renderTasks() {
           <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${called} / ${task.total} (${prog}%)</div>
         </div>
         <div class="task-actions">
-          <button class="btn-detail" onclick="openTaskDetail('${task.id}')">📋 详情</button>
-          ${task.status === 'pending' ? `<button class="btn-start" onclick="startTask('${task.id}')">▶️ 开始</button>` : ''}
-          ${task.status === 'running' && task.mode === 'manual' ? `<button class="btn-next" onclick="showNextCallBtn()">✅ 下一个</button>` : ''}
-          ${task.status === 'running' ? `<button class="btn-pause" onclick="pauseTask('${task.id}')">⏸️ 暂停</button>` : ''}
-          ${task.status === 'paused' ? `<button class="btn-resume" onclick="resumeTask('${task.id}')">▶️ 继续</button>` : ''}
-          <button class="btn-delete" onclick="deleteTask('${task.id}')">🗑️</button>
+          <button class="btn-detail" data-action="detail" data-id="${task.id}">📋 详情</button>
+          ${task.status === 'pending' ? `<button class="btn-start" data-action="start" data-id="${task.id}">▶️ 开始</button>` : ''}
+          ${task.status === 'running' && task.mode === 'manual' ? `<button class="btn-next" data-action="next">✅ 下一个</button>` : ''}
+          ${task.status === 'running' ? `<button class="btn-pause" data-action="pause" data-id="${task.id}">⏸️ 暂停</button>` : ''}
+          ${task.status === 'paused' ? `<button class="btn-resume" data-action="resume" data-id="${task.id}">▶️ 继续</button>` : ''}
+          <button class="btn-delete" data-action="delete" data-id="${task.id}">🗑️</button>
         </div>
       </div>`;
   }).join('');
@@ -550,7 +550,16 @@ function renderTasks() {
 function getStatusLabel(s) { return { pending: '待执行', running: '执行中', paused: '已暂停', completed: '已完成' }[s] || s; }
 
 function handleTaskAction(e) {
-  // handled by onclick attributes
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const id = btn.dataset.id;
+  if (action === 'delete') { deleteTask(id); return; }
+  if (action === 'detail') { openTaskDetail(id); return; }
+  if (action === 'start') { startTask(id); return; }
+  if (action === 'pause') { pauseTask(id); return; }
+  if (action === 'resume') { resumeTask(id); return; }
+  if (action === 'next') { showNextCallBtn(); return; }
 }
 
 function resetTaskForm() {
