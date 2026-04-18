@@ -340,32 +340,21 @@ function handleFileImport(e) {
   document.getElementById('importFileName').textContent = '📄 ' + file.name;
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const buffer = ev.target.result;
-    let text;
-    // 先用 UTF-8 解码
-    try {
-      text = new TextDecoder('utf-8').decode(buffer);
-      if (/电话/.test(text)) {
-        parseImportFile(text, file.name);
-        return;
-      }
-    } catch(ex) {}
-    // UTF-8 解不出"电话"，尝试 gb18030（iOS Safari 标准名称，覆盖 GBK）
-    try {
-      text = new TextDecoder('gb18030').decode(buffer);
-      if (/电话/.test(text)) {
-        parseImportFile(text, file.name);
-        return;
-      }
-    } catch(ex) {}
-    // 都失败，尝试去掉 BOM
-    const bytes = new Uint8Array(buffer);
-    if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
-      text = new TextDecoder('utf-8').decode(bytes.slice(3));
-      parseImportFile(text, file.name);
-    } else {
-      parseImportFile(text || '', file.name);
+    const buf = ev.target.result;
+    // 尝试解码：gbk → gb18030 → utf-8
+    var encodings = ['gbk', 'gb18030', 'utf-8'];
+    for (var i = 0; i < encodings.length; i++) {
+      try {
+        var t = new TextDecoder(encodings[i]).decode(buf);
+        t = t.replace(/^\uFEFF/, '');
+        if (/电话/.test(t)) {
+          parseImportFile(t, file.name);
+          return;
+        }
+      } catch(ex) {}
     }
+    // 全部失败
+    parseImportFile('', file.name);
   };
   reader.readAsArrayBuffer(file);
 }
