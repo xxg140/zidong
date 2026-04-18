@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AutoDialer - 智能自动拨号系统</title>
-  <link rel="stylesheet" href="style.css?v=28">
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
   <header class="app-header">
@@ -14,10 +14,7 @@
 
   <main class="main-content">
     <nav class="sidebar">
-      <button class="nav-item" data-tab="dialpad"><span class="nav-icon">🔢</span><span class="nav-label">拨号盘</span></button>
       <button class="nav-item active" data-tab="tasks"><span class="nav-icon">📋</span><span class="nav-label">任务</span></button>
-      <button class="nav-item" data-tab="history"><span class="nav-icon">📜</span><span class="nav-label">记录</span></button>
-      <button class="nav-item" data-tab="stats"><span class="nav-icon">📊</span><span class="nav-label">统计</span></button>
     </nav>
 
     <section class="content-area">
@@ -39,34 +36,6 @@
         <div class="pagination" id="contactsPagination"></div>
       </div>
 
-      <!-- 拨号盘页面 -->
-      <div id="dialpadPage" class="page">
-        <div class="page-header"><h2>手动拨号</h2></div>
-        <div class="dialpad-container">
-          <div class="dial-display">
-            <input type="tel" id="dialNumber" placeholder="输入号码" readonly>
-            <button class="dial-clear" id="dialClear">⌫</button>
-          </div>
-          <div class="dialpad-grid">
-            <button class="dial-btn" data-digit="1">1</button>
-            <button class="dial-btn" data-digit="2">2<span>ABC</span></button>
-            <button class="dial-btn" data-digit="3">3<span>DEF</span></button>
-            <button class="dial-btn" data-digit="4">4<span>GHI</span></button>
-            <button class="dial-btn" data-digit="5">5<span>JKL</span></button>
-            <button class="dial-btn" data-digit="6">6<span>MNO</span></button>
-            <button class="dial-btn" data-digit="7">7<span>PQRS</span></button>
-            <button class="dial-btn" data-digit="8">8<span>TUV</span></button>
-            <button class="dial-btn" data-digit="9">9<span>WXYZ</span></button>
-            <button class="dial-btn" data-digit="*">*</button>
-            <button class="dial-btn" data-digit="0">0<span>+</span></button>
-            <button class="dial-btn" data-digit="#">#</button>
-          </div>
-          <div class="dialpad-container-actions">
-            <button class="btn btn-call" id="makeCallBtn">📱 拨打</button>
-          </div>
-        </div>
-      </div>
-
       <!-- 任务页面 -->
       <div id="tasksPage" class="page active">
         <div class="page-header">
@@ -77,65 +46,12 @@
           </div>
         </div>
         <div class="task-overview">
-          <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-info"><div class="stat-value" id="totalTasks">0</div><div class="stat-label">总任务</div></div></div>
-          <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-info"><div class="stat-value" id="pendingTasks">0</div><div class="stat-label">待执行</div></div></div>
-          <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="completedTasks">0</div><div class="stat-label">已完成</div></div></div>
-          <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-info"><div class="stat-value" id="runningTasks">0</div><div class="stat-label">执行中</div></div></div>
+          <div class="stat-card" style="flex:1;text-align:center;">
+            <div style="font-size:32px;font-weight:700;color:#007AFF;" id="todayCallCount">0</div>
+            <div style="font-size:13px;color:#8E8E93;margin-top:4px;">今日拨打数</div>
+          </div>
         </div>
         <div class="task-list" id="taskList"></div>
-      </div>
-
-      <!-- 通话记录页面 -->
-      <div id="historyPage" class="page">
-        <div class="page-header">
-          <h2>通话记录</h2>
-          <div class="header-actions">
-            <button class="btn btn-secondary" id="exportHistoryBtn">📤 导出</button>
-            <button class="btn btn-danger" id="clearHistoryBtn">🗑️ 清空</button>
-          </div>
-        </div>
-        <div class="filter-bar">
-          <select id="historyStatus"><option value="">全部状态</option><option value="completed">已接通</option><option value="missed">未接通</option><option value="failed">拨打失败</option></select>
-        </div>
-        <div class="history-date-tabs">
-          <button class="date-tab active" data-range="today">今天</button>
-          <button class="date-tab" data-range="yesterday">昨天</button>
-          <button class="date-tab" data-range="thisWeek">本周</button>
-          <button class="date-tab" data-range="lastWeek">上周</button>
-          <button class="date-tab" data-range="thisMonth">本月</button>
-          <button class="date-tab" data-range="lastMonth">上月</button>
-          <button class="date-tab date-tab-custom" id="historyCustomDateBtn" data-range="custom">📅 自定义</button>
-        </div>
-        <div id="historyCustomDateRange" style="display:none;padding:0 16px 8px;">
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="date" id="historyDateFrom" style="flex:1;padding:8px;border:1px solid var(--light-gray);border-radius:var(--radius);font-size:13px;">
-            <span style="color:#8E8E93;">至</span>
-            <input type="date" id="historyDateTo" style="flex:1;padding:8px;border:1px solid var(--light-gray);border-radius:var(--radius);font-size:13px;">
-            <button class="btn btn-primary" id="applyCustomDateBtn" style="padding:8px 12px;font-size:13px;white-space:nowrap;">确定</button>
-          </div>
-        </div>
-        <div class="history-list" id="historyList"></div>
-      </div>
-
-      <!-- 统计页面 -->
-      <div id="statsPage" class="page">
-        <div class="page-header">
-          <h2>数据统计</h2>
-          <div class="header-actions">
-            <select id="statsPeriod"><option value="7">最近7天</option><option value="30" selected>最近30天</option><option value="90">最近90天</option></select>
-            <button class="btn btn-secondary" id="exportStatsBtn">📊 导出报告</button>
-          </div>
-        </div>
-        <div class="stats-overview">
-          <div class="big-stat"><div class="big-stat-value" id="totalCalls">0</div><div class="big-stat-label">总拨打量</div></div>
-          <div class="big-stat"><div class="big-stat-value" id="avgConnectRate">0%</div><div class="big-stat-label">平均接通率</div></div>
-          <div class="big-stat"><div class="big-stat-value" id="avgDuration">0秒</div><div class="big-stat-label">平均通话时长</div></div>
-        </div>
-        <div class="charts-container">
-          <div class="chart-card"><h3>每日拨打电话趋势</h3><div class="chart" id="dailyChart"></div></div>
-          <div class="chart-card"><h3>接通率分布</h3><div class="chart" id="connectRateChart"></div></div>
-        </div>
-        <div class="leaderboard"><h3>TOP 联系人（按通话次数）</h3><div id="topContactsList"></div></div>
       </div>
     </section>
   </main>
@@ -359,6 +275,6 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=26"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>
