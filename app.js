@@ -340,33 +340,40 @@ function handleFileImport(e) {
   document.getElementById('importFileName').textContent = '📄 ' + file.name;
   const reader = new FileReader();
   reader.onload = function(ev) {
-    let text = ev.target.result;
-    // 如果有 UTF-8 BOM，先去掉
-    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-    // 如果"电话"是乱码（UTF-8解码失败导致GBK内容），尝试GBK重解码
-    if (!/电话/.test(text)) {
-      const bytes = new Uint8Array(ev.target.result instanceof ArrayBuffer ? ev.target.result : new TextEncoder().encode(text));
-      // 尝试 GBK 解码
-      try {
-        const decoder = new TextDecoder('gbk');
-        text = decoder.decode(bytes);
-        // 如果GBK能匹配到"电话"，说明确实是GBK文件
-        if (/电话/.test(text)) {
-          parseImportFile(text, file.name);
-          return;
-        }
-      } catch(ex) {}
-      // 还不行就尝试 GB2312
-      try {
-        const decoder2 = new TextDecoder('gb2312');
-        text = decoder2.decode(bytes);
-        if (/电话/.test(text)) {
-          parseImportFile(text, file.name);
-          return;
-        }
-      } catch(ex2) {}
+    const buffer = ev.target.result;
+    let text;
+    // 先用 UTF-8 解码
+    try {
+      text = new TextDecoder('utf-8').decode(buffer);
+      if (/电话/.test(text)) {
+        parseImportFile(text, file.name);
+        return;
+      }
+    } catch(ex) {}
+    // UTF-8 解不出"电话"，尝试 GBK（Excel 中文 Windows 默认编码）
+    try {
+      text = new TextDecoder('gbk').decode(buffer);
+      if (/电话/.test(text)) {
+        parseImportFile(text, file.name);
+        return;
+      }
+    } catch(ex) {}
+    // 还不行尝试 GB2312
+    try {
+      text = new TextDecoder('gb2312').decode(buffer);
+      if (/电话/.test(text)) {
+        parseImportFile(text, file.name);
+        return;
+      }
+    } catch(ex2) {}
+    // 都失败，尝试去掉 BOM
+    const bytes = new Uint8Array(buffer);
+    if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+      text = new TextDecoder('utf-8').decode(bytes.slice(3));
+      parseImportFile(text, file.name);
+    } else {
+      parseImportFile(text || '', file.name);
     }
-    parseImportFile(text, file.name);
   };
   reader.readAsArrayBuffer(file);
 }
