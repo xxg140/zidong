@@ -524,7 +524,7 @@ function renderTasks() {
         <div style="font-size:13px;color:#8E8E93;margin-top:2px;">${dialInfo.phone}${dialInfo.note ? ' &nbsp;|&nbsp; ' + dialInfo.note : ''}</div>
       </div>` : '';
     return `
-      <div class="task-card" data-id="${task.id}">
+      <div class="task-card" data-id="${task.id}" data-action="detail">
         <div class="task-header">
           <div class="task-title">${task.name}</div>
           <span class="task-status ${task.status}">${getStatusLabel(task.status)}</span>
@@ -546,12 +546,13 @@ function renderTasks() {
           <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${called} / ${task.total} (${prog}%)</div>
         </div>
         <div class="task-actions">
-          <button class="btn-detail" data-action="detail" data-id="${task.id}">📋 详情</button>
           ${task.status === 'pending' ? `<button class="btn-start" data-action="start" data-id="${task.id}">▶️ 开始</button>` : ''}
-          ${task.status === 'running' && task.mode === 'manual' && pending > 0 ? `<button class="btn-big-next" data-action="next-now" data-id="${task.id}">☎️ 已挂断，拨下一个</button>` : ''}
+          ${task.status === 'running' && task.mode === 'manual' && pending > 0 ? `<button class="btn-start" data-action="next-now" data-id="${task.id}">☎️ 拨打下一个</button>` : ''}
           ${task.status === 'running' ? `<button class="btn-pause" data-action="pause" data-id="${task.id}">⏸️ 暂停</button>` : ''}
-          ${task.status === 'paused' ? `<button class="btn-resume" data-action="resume" data-id="${task.id}">▶️ 继续</button>` : ''}
-          <button class="btn-delete" data-action="delete" data-id="${task.id}">🗑️</button>
+          ${task.status === 'paused' ? `<button class="btn-start" data-action="resume" data-id="${task.id}">▶️ 继续</button>` : ''}
+        </div>
+        <div class="task-delete-row">
+          <button class="btn-delete" data-action="delete" data-id="${task.id}">🗑️ 删除任务</button>
         </div>
       </div>`;
   }).join('');
@@ -560,16 +561,22 @@ function renderTasks() {
 function getStatusLabel(s) { return { pending: '待执行', running: '执行中', paused: '已暂停', completed: '已完成' }[s] || s; }
 
 function handleTaskAction(e) {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  const action = btn.dataset.action;
-  const id = btn.dataset.id;
-  if (action === 'delete') { deleteTask(id); return; }
-  if (action === 'detail') { openTaskDetail(id); return; }
-  if (action === 'start') { startTask(id); return; }
-  if (action === 'pause') { pauseTask(id); return; }
-  if (action === 'resume') { resumeTask(id); return; }
-  if (action === 'next-now') { executeCurrentTask(); return; }
+  // 如果点击的是按钮，处理按钮操作
+  const btn = e.target.closest('button[data-action]');
+  if (btn) {
+    e.stopPropagation();
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+    if (action === 'delete') { deleteTask(id); return; }
+    if (action === 'start') { startTask(id); return; }
+    if (action === 'pause') { pauseTask(id); return; }
+    if (action === 'resume') { resumeTask(id); return; }
+    if (action === 'next-now') { executeCurrentTask(); return; }
+    return;
+  }
+  // 否则点击卡片 → 进入详情
+  const card = e.target.closest('.task-card');
+  if (card) { openTaskDetail(card.dataset.id); }
 }
 
 function resetTaskForm() {
