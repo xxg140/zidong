@@ -108,7 +108,7 @@ function setupEventListeners() {
   document.getElementById('confirmSelectionBtn').addEventListener('click', confirmSelection);
   document.getElementById('pickerSearch').addEventListener('input', renderPickerContacts);
   document.getElementById('taskForm').addEventListener('submit', saveTask);
-  document.getElementById('taskMode').addEventListener('change', updateModeHint);
+
   // 任务详情 tab 切换
   document.querySelectorAll('.detail-tab').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
@@ -116,7 +116,7 @@ function setupEventListeners() {
     if (currentDetailTask) renderTaskDetailList(currentDetailTask, btn.dataset.detailTab);
   }));
   document.getElementById('closeTaskDetailBtn').addEventListener('click', () => closeModal('taskDetailModal'));
-  document.getElementById('reAddFailedBtn').addEventListener('click', reAddFailedContacts);
+
   document.getElementById('reAddAllBtn').addEventListener('click', reAddAllContacts);
   document.getElementById('createFailedTaskBtn').addEventListener('click', createFailedTask);
   // 移除 resetTaskStatusBtn（已删除）
@@ -424,7 +424,6 @@ function dedupContacts(contacts) {
 function confirmManualAdd() {
   const raw = document.getElementById('manualAddInput').value.trim();
   const taskName = document.getElementById('manualTaskName').value.trim();
-  const interval = parseInt(document.getElementById('manualTaskInterval').value) || 30;
   const mode = document.getElementById('manualTaskMode').value;
   if (!taskName) { showToast('请输入任务名称', 'error'); return; }
   if (!raw) { showToast('请输入至少一个号码', 'error'); return; }
@@ -442,7 +441,6 @@ function confirmManualAdd() {
   const task = {
     name: taskName,
     contacts,
-    interval,
     mode,
     status: 'pending',
     total: contacts.length,
@@ -463,14 +461,12 @@ function confirmManualAdd() {
 function confirmImportTask() {
   const taskName = document.getElementById('importTaskName').value.trim();
   const contacts = document.getElementById('importTaskDedup').checked ? dedupContacts(state.importContacts) : state.importContacts;
-  const interval = parseInt(document.getElementById('importTaskInterval').value) || 30;
   const mode = document.getElementById('importTaskMode').value;
   if (!taskName) { showToast('请输入任务名称', 'error'); return; }
   if (!contacts.length) { showToast('没有可导入的号码', 'error'); return; }
   const task = {
     name: taskName,
     contacts: contacts.map(c => ({ ...c, dialStatus: 'pending', dialedAt: null })),
-    interval,
     mode,
     status: 'pending',
     total: contacts.length,
@@ -547,7 +543,6 @@ function renderTasks() {
         </div>
         <div class="task-meta">
           <span>📞 ${task.total}个</span>
-          <span>⏱️ ${task.interval}秒</span>
           <span>${modeLabel}</span>
         </div>
         <div class="task-status-summary">
@@ -596,17 +591,11 @@ function resetTaskForm() {
   document.getElementById('taskForm').reset();
   state.selectedContacts = [];
   document.getElementById('selectedContacts').innerHTML = '';
-  document.getElementById('taskInterval').value = 30;
-  document.getElementById('taskRetry').value = 2;
   document.getElementById('taskMode').value = 'manual';
   document.getElementById('taskOrderMode').value = 'sequential';
-  updateModeHint();
 }
 
-function updateModeHint() {
-  const mode = document.getElementById('taskMode').value;
-  document.getElementById('taskModeHint').style.display = mode === 'manual' ? 'block' : 'none';
-}
+
 
 function openContactPicker() {
   state.tempSelectedContacts = [...state.selectedContacts];
@@ -657,8 +646,6 @@ function removeSelectedContact(id) {
 function saveTask(e) {
   e.preventDefault();
   const name = document.getElementById('taskName').value.trim();
-  const interval = parseInt(document.getElementById('taskInterval').value) || 30;
-  const retry = parseInt(document.getElementById('taskRetry').value) || 2;
   const mode = document.getElementById('taskMode').value;
   const orderMode = document.getElementById('taskOrderMode').value;
   if (!name) { showToast('请输入任务名称', 'error'); return; }
@@ -666,7 +653,7 @@ function saveTask(e) {
   let contacts = [...state.selectedContacts].map(c => ({ ...c, dialStatus: 'pending', dialedAt: null }));
   if (orderMode === 'random') contacts = contacts.sort(() => Math.random() - 0.5);
   const task = {
-    name, contacts, interval, retry, mode,
+    name, contacts, mode,
     status: 'pending',
     total: contacts.length, completed: 0, failed: 0, currentIndex: 0, history: []
   };
@@ -725,7 +712,7 @@ function executeCurrentTask() {
   // 自动模式：定时拨打下一个；手动模式：等待用户点击卡片上的大按钮
   if (task.mode === 'auto') {
     clearTimeout(state.taskTimer);
-    state.taskTimer = setTimeout(() => executeCurrentTask(), task.interval * 1000);
+    state.taskTimer = setTimeout(() => executeCurrentTask(), 30000);
   }
 }
 
@@ -863,20 +850,7 @@ function reDialContact(taskId, idx) {
   showToast('已重置为待拨打状态', 'success');
 }
 
-function reAddFailedContacts() {
-  if (!currentDetailTask) return;
-  let count = 0;
-  currentDetailTask.contacts.forEach(c => {
-    if (c.dialStatus === 'called' || c.dialStatus === 'not_answering') {
-      c.dialStatus = 'pending'; c.dialedAt = null; count++;
-    }
-  });
-  DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts });
-  state.tasks = DB.get(DB.tasks);
-  renderTaskDetailList(currentDetailTask, currentDetailTab);
-  renderTasks();
-  showToast(`已将 ${count} 个未接号码重置为待拨打`, 'success');
-}
+
 
 function createFailedTask() {
   if (!currentDetailTask) return;
@@ -887,7 +861,6 @@ function createFailedTask() {
   const task = {
     name: taskName,
     contacts: newContacts,
-    interval: currentDetailTask.interval || 30,
     mode: currentDetailTask.mode || 'manual',
     status: 'pending',
     total: newContacts.length,
@@ -1130,7 +1103,6 @@ function renderAll() {
   renderTasks();
   renderHistory();
   renderStats();
-  updateModeHint();
 }
 
 document.addEventListener('DOMContentLoaded', init);
