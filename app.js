@@ -120,7 +120,14 @@ function setupEventListeners() {
   document.getElementById('createFailedTaskBtn').addEventListener('click', createFailedTask);
   // 移除 resetTaskStatusBtn（已删除）
   // 通话记录
-  document.getElementById('filterHistoryBtn').addEventListener('click', renderHistory);
+  document.getElementById('filterHistoryBtn')?.addEventListener('click', renderHistory);
+  document.getElementById('historyStatus').addEventListener('change', renderHistory);
+  document.querySelectorAll('.date-tab').forEach(btn => {
+    btn.addEventListener('click', () => setHistoryDateRange(btn.dataset.range));
+  });
+  document.getElementById('applyCustomDateBtn').addEventListener('click', () => {
+    renderHistory();
+  });
   document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
   document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
   // 统计
@@ -910,14 +917,74 @@ function reAddAllContacts() {
 }
 
 // ========== 通话记录 ==========
+state.historyDateRange = 'today';
+
+function getDateRange(range) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let from, to;
+  switch (range) {
+    case 'today':
+      from = to = today; break;
+    case 'yesterday':
+      from = to = new Date(today.getTime() - 86400000); break;
+    case 'thisWeek': {
+      const day = today.getDay() || 7;
+      from = new Date(today.getTime() - (day - 1) * 86400000);
+      to = today; break;
+    }
+    case 'lastWeek': {
+      const day = today.getDay() || 7;
+      from = new Date(today.getTime() - (day + 6) * 86400000);
+      to = new Date(today.getTime() - day * 86400000); break;
+    }
+    case 'thisMonth':
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+      to = today; break;
+    case 'lastMonth':
+      from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      to = new Date(now.getFullYear(), now.getMonth(), 0); break;
+    case 'custom': {
+      const fv = document.getElementById('historyDateFrom').value;
+      const tv = document.getElementById('historyDateTo').value;
+      if (!fv && !tv) return getDateRange('today');
+      from = fv ? new Date(fv) : new Date('2000-01-01');
+      to = tv ? new Date(tv) : today;
+      break;
+    }
+    default:
+      from = to = today;
+  }
+  return { from, to };
+}
+
+function formatDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function setHistoryDateRange(range) {
+  state.historyDateRange = range;
+  document.querySelectorAll('.date-tab').forEach(t => t.classList.toggle('active', t.dataset.range === range));
+  const customPanel = document.getElementById('historyCustomDateRange');
+  if (range === 'custom') {
+    customPanel.style.display = 'block';
+    return;
+  }
+  customPanel.style.display = 'none';
+  renderHistory();
+}
+
 function renderHistory() {
   const status = document.getElementById('historyStatus').value;
-  const from = document.getElementById('historyDateFrom').value;
-  const to = document.getElementById('historyDateTo').value;
+  const { from, to } = getDateRange(state.historyDateRange);
+  const fromStr = formatDate(from);
+  const toStr = formatDate(to);
   let filtered = state.history.filter(h => {
     if (status && h.status !== status) return false;
-    if (from && new Date(h.dialedAt) < new Date(from)) return false;
-    if (to && new Date(h.dialedAt) > new Date(to + 'T23:59:59')) return false;
+    const hd = formatDate(new Date(h.dialedAt));
+    if (hd < fromStr) return false;
+    if (hd > toStr) return false;
     return true;
   });
   filtered.sort((a, b) => new Date(b.dialedAt) - new Date(a.dialedAt));
@@ -1008,10 +1075,6 @@ function exportStats() {
 
 // ========== 设置 ==========
 function openSettings() {
-  document.getElementById('settingWorkStart').value = state.settings.workStart || '09:00';
-  document.getElementById('settingWorkEnd').value = state.settings.workEnd || '18:00';
-  document.getElementById('restSat').checked = state.settings.restSat !== false;
-  document.getElementById('restSun').checked = state.settings.restSun !== false;
   document.getElementById('settingGroups').value = (state.settings.groups || []).join('\n');
   document.getElementById('settingStorage').value = state.settings.storage || 'local';
   renderCustomFieldSettings();
@@ -1050,10 +1113,6 @@ function saveSettings(e) {
   });
   state.settings = {
     ...state.settings,
-    workStart: document.getElementById('settingWorkStart').value,
-    workEnd: document.getElementById('settingWorkEnd').value,
-    restSat: document.getElementById('restSat').checked,
-    restSun: document.getElementById('restSun').checked,
     groups, customFields,
     storage: document.getElementById('settingStorage').value
   };
