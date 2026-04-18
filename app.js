@@ -125,9 +125,6 @@ function setupEventListeners() {
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
   document.getElementById('settingsForm').addEventListener('submit', saveSettings);
   document.getElementById('addCustomFieldBtn').addEventListener('click', addCustomFieldRow);
-  // 浮动面板
-  document.getElementById('nextCallBtn').addEventListener('click', onNextCall);
-  document.getElementById('stopTaskBtn').addEventListener('click', stopTask);
 }
 
 // ========== 页面切换 ==========
@@ -538,7 +535,7 @@ function renderTasks() {
         <div class="task-actions">
           <button class="btn-detail" data-action="detail" data-id="${task.id}">📋 详情</button>
           ${task.status === 'pending' ? `<button class="btn-start" data-action="start" data-id="${task.id}">▶️ 开始</button>` : ''}
-          ${task.status === 'running' && task.mode === 'manual' ? `<button class="btn-next" data-action="next">✅ 下一个</button>` : ''}
+          ${task.status === 'running' && task.mode === 'manual' ? `<button class="btn-big-next" data-action="next-now" data-id="${task.id}">☎️ 已挂断，拨下一个</button>` : ''}
           ${task.status === 'running' ? `<button class="btn-pause" data-action="pause" data-id="${task.id}">⏸️ 暂停</button>` : ''}
           ${task.status === 'paused' ? `<button class="btn-resume" data-action="resume" data-id="${task.id}">▶️ 继续</button>` : ''}
           <button class="btn-delete" data-action="delete" data-id="${task.id}">🗑️</button>
@@ -559,7 +556,7 @@ function handleTaskAction(e) {
   if (action === 'start') { startTask(id); return; }
   if (action === 'pause') { pauseTask(id); return; }
   if (action === 'resume') { resumeTask(id); return; }
-  if (action === 'next') { showNextCallBtn(); return; }
+  if (action === 'next-now') { executeCurrentTask(); return; }
 }
 
 function resetTaskForm() {
@@ -655,7 +652,6 @@ function startTask(id) {
   state.tasks = DB.get(DB.tasks);
   state.currentTask = task;
   renderTasks();
-  showFloatingPanel();
   executeCurrentTask();
 }
 
@@ -688,27 +684,13 @@ function executeCurrentTask() {
 
   DB.update(DB.tasks, task.id, { contacts: task.contacts, currentIndex: task.currentIndex, completed: task.completed });
   state.tasks = DB.get(DB.tasks);
-  // 更新进度：统计已拨打的数量
-  const called = task.contacts.filter(x => x.dialStatus !== 'pending').length;
-  updateFloatingPanel(called, task.total, c?.name || c?.phone || '-');
   renderTasks();
 
-  // 自动模式：定时拨打下一个；手动模式：等待用户点击
+  // 自动模式：定时拨打下一个；手动模式：等待用户点击卡片上的大按钮
   if (task.mode === 'auto') {
     clearTimeout(state.taskTimer);
     state.taskTimer = setTimeout(() => executeCurrentTask(), task.interval * 1000);
-  } else {
-    showNextCallBtn();
   }
-}
-
-function onNextCall() {
-  document.getElementById('nextCallBtn').style.display = 'none';
-  executeCurrentTask();
-}
-
-function showNextCallBtn() {
-  document.getElementById('nextCallBtn').style.display = 'block';
 }
 
 function pauseTask(id) {
@@ -719,7 +701,6 @@ function pauseTask(id) {
   DB.update(DB.tasks, id, task);
   state.tasks = DB.get(DB.tasks);
   if (state.currentTask?.id == id) state.currentTask = null;
-  hideFloatingPanel();
   renderTasks();
   showToast('任务已暂停', 'warning');
 }
@@ -731,14 +712,12 @@ function stopTask() {
   if (state.currentTask) {
     pauseTask(state.currentTask.id);
   }
-  hideFloatingPanel();
 }
 
 function finishTask(task) {
   task.status = 'completed';
   DB.update(DB.tasks, task.id, task);
   state.tasks = DB.get(DB.tasks);
-  hideFloatingPanel();
   state.currentTask = null;
   renderTasks();
   showToast(`任务「${task.name}」全部完成！🎉`, 'success');
@@ -746,30 +725,11 @@ function finishTask(task) {
 
 function deleteTask(id) {
   if (!confirm('确定删除此任务？')) return;
-  if (state.currentTask?.id == id) { clearTimeout(state.taskTimer); state.currentTask = null; hideFloatingPanel(); }
+  if (state.currentTask?.id == id) { clearTimeout(state.taskTimer); state.currentTask = null; }
   DB.delete(DB.tasks, id);
   state.tasks = DB.get(DB.tasks);
   showToast('任务已删除', 'success');
   renderTasks();
-}
-
-function showFloatingPanel() {
-  const panel = document.getElementById('floatingPanel');
-  panel.style.display = 'block';
-  const task = state.currentTask;
-  if (task) {
-    document.getElementById('floatingTitle').textContent = task.mode === 'manual' ? '🔖 手动确认模式' : '⚡ 自动拨号中';
-    document.getElementById('nextCallBtn').style.display = task.mode === 'manual' ? 'block' : 'none';
-  }
-}
-
-function hideFloatingPanel() { document.getElementById('floatingPanel').style.display = 'none'; }
-
-function updateFloatingPanel(cur, total, name) {
-  const prog = total > 0 ? Math.round((cur / total) * 100) : 0;
-  document.getElementById('progressText').textContent = `${cur} / ${total}`;
-  document.getElementById('progressFill').style.width = prog + '%';
-  document.getElementById('floatingCurrent').textContent = `正在拨打：${name}`;
 }
 
 // ========== 任务详情 ==========
