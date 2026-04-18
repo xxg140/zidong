@@ -343,28 +343,50 @@ function handleFileImport(e) {
   reader.readAsText(file);
 }
 
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
 function parseImportFile(content, filename) {
-  const lines = content.split('\n').filter(l => l.trim());
+  // 统一换行符
+  const text = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\uFEFF/g, '');
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   if (lines.length < 2) { showToast('文件格式错误或数据为空', 'error'); return; }
-  const headers = lines[0].split(',').map(h => h.trim().replace(/\uFEFF/g, ''));
+  const headers = parseCSVLine(lines[0]).map(h => h.trim());
+  const phoneIdx = headers.findIndex(h => /电话|mobile|phone|tel/i.test(h));
+  const nameIdx = headers.findIndex(h => /姓名|name/i.test(h));
+  const groupIdx = headers.findIndex(h => /分组|group|分类/i.test(h));
+  const noteIdx = headers.findIndex(h => /备注|note|描述/i.test(h));
+  if (phoneIdx === -1) { showToast('未找到"电话"列，请确认表头包含"电话"', 'error'); return; }
   const contacts = [];
   for (let i = 1; i < lines.length; i++) {
-    const vals = lines[i].split(',').map(v => v.trim());
-    if (!vals[headers.findIndex(h => h.includes('电话') || h.includes('phone') || h.includes('Tel'))] && !vals[headers.findIndex(h => h.includes('phone') || h.includes('电话'))]) continue;
-    const phoneIdx = headers.findIndex(h => h.includes('电话') || h.includes('phone') || h.includes('Tel'));
-    const nameIdx = headers.findIndex(h => h.includes('姓名') || h.includes('name'));
-    const groupIdx = headers.findIndex(h => h.includes('分组') || h.includes('group'));
-    const noteIdx = headers.findIndex(h => h.includes('备注') || h.includes('note'));
-    const phone = vals[phoneIdx] || '';
-    if (!phone) continue;
+    const vals = parseCSVLine(lines[i]);
+    const phone = (vals[phoneIdx] || '').replace(/[^\d+\-]/g, '');
+    if (!phone || !/[\d]{5,}/.test(phone)) continue;
     contacts.push({
-      name: vals[nameIdx] || phone,
+      name: (vals[nameIdx] || phone).replace(/^"|"$/g, ''),
       phone,
-      group: vals[groupIdx] || '',
-      note: vals[noteIdx] || ''
+      group: (vals[groupIdx] || '').replace(/^"|"$/g, ''),
+      note: (vals[noteIdx] || '').replace(/^"|"$/g, '')
     });
   }
-  if (!contacts.length) { showToast('未找到有效电话号码', 'error'); return; }
+  if (!contacts.length) { showToast('未找到有效电话号码，请检查：1) 表头是否有"电话"列 2) 电话号码是否为纯数字格式', 'error'); return; }
   state.importContacts = contacts;
 
   if (state.importTab === 'contacts') {
