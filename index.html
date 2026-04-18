@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AutoDialer - 智能自动拨号系统</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <header class="app-header">
@@ -268,7 +268,7 @@
             <option value="manual" selected>手动确认模式（打完点「下一个」再拨）⭐</option>
           </select>
         </div>
-        <div class="mode-hint">💡 手动确认模式：每打完一个电话后，点浮动面板「下一个」才拨下一个，防止电话还没挂断就拨出。</div>
+        <div class="mode-hint">💡 手动确认模式：每打完一个电话后，点任务卡片上的绿色大按钮「已挂断，拨下一个」才拨下一个，防止电话还没挂断就拨出。</div>
         <div class="form-group">
           <label>执行顺序</label>
           <select id="taskOrderMode">
@@ -355,23 +355,6 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- 浮动拨号面板 -->
-  <div class="floating-panel" id="floatingPanel" style="display:none;">
-    <div class="floating-header">
-      <span class="floating-title" id="floatingTitle">🔄 任务执行中</span>
-      <button class="floating-close" id="stopTaskBtn">停止</button>
-    </div>
-    <div class="floating-content">
-      <div class="floating-progress">
-        <div class="progress-text" id="progressText">0 / 0</div>
-        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-      </div>
-      <div class="floating-current" id="floatingCurrent">正在拨打：-</div>
-      <button class="btn-next-call" id="nextCallBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:none;border-radius:8px;background:#34C759;color:white;font-weight:600;cursor:pointer;font-size:14px;">✅ 已挂断，拨下一个</button>
-    </div>
-  </div>
-
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
-
