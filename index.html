@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AutoDialer - 智能自动拨号系统</title>
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
   <header class="app-header">
@@ -95,9 +95,23 @@
         </div>
         <div class="filter-bar">
           <select id="historyStatus"><option value="">全部状态</option><option value="completed">已接通</option><option value="missed">未接通</option><option value="failed">拨打失败</option></select>
-          <input type="date" id="historyDateFrom">
-          <input type="date" id="historyDateTo">
-          <button class="btn btn-secondary" id="filterHistoryBtn">筛选</button>
+        </div>
+        <div class="history-date-tabs">
+          <button class="date-tab active" data-range="today">今天</button>
+          <button class="date-tab" data-range="yesterday">昨天</button>
+          <button class="date-tab" data-range="thisWeek">本周</button>
+          <button class="date-tab" data-range="lastWeek">上周</button>
+          <button class="date-tab" data-range="thisMonth">本月</button>
+          <button class="date-tab" data-range="lastMonth">上月</button>
+          <button class="date-tab date-tab-custom" id="historyCustomDateBtn" data-range="custom">📅 自定义</button>
+        </div>
+        <div id="historyCustomDateRange" style="display:none;padding:0 16px 8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="date" id="historyDateFrom" style="flex:1;padding:8px;border:1px solid var(--light-gray);border-radius:var(--radius);font-size:13px;">
+            <span style="color:#8E8E93;">至</span>
+            <input type="date" id="historyDateTo" style="flex:1;padding:8px;border:1px solid var(--light-gray);border-radius:var(--radius);font-size:13px;">
+            <button class="btn btn-primary" id="applyCustomDateBtn" style="padding:8px 12px;font-size:13px;white-space:nowrap;">确定</button>
+          </div>
         </div>
         <div class="history-list" id="historyList"></div>
       </div>
@@ -334,19 +348,6 @@
         <button class="modal-close" data-modal="settingsModal">×</button>
       </div>
       <form id="settingsForm">
-        <div class="form-group">
-          <label>工作时间段</label>
-          <div class="time-range">
-            <input type="time" id="settingWorkStart" value="09:00"><span>至</span><input type="time" id="settingWorkEnd" value="18:00">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>休息日</label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" id="restSat" checked> 周六</label>
-            <label><input type="checkbox" id="restSun" checked> 周日</label>
-          </div>
-        </div>
         <div class="settings-divider"></div>
         <div class="settings-section-title">📋 分组管理</div>
         <div class="form-group">
@@ -376,6 +377,6 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=18"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>
