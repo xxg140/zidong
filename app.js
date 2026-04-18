@@ -510,11 +510,11 @@ function renderTasks() {
     const modeLabel = task.mode === 'manual' ? '🔖 手动确认' : '⚡ 自动';
     const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
     const notAnswered = called - connected;
-    // 当前拨打信息
+    // 当前拨打信息（无论是否自动运行，只要在拨打就显示）
     const dialInfo = task.currentDialing;
-    const dialInfoHtml = (task.status === 'running' && dialInfo) ? `
+    const dialInfoHtml = (dialInfo) ? `
       <div class="dial-current-info">
-        <div style="font-size:16px;font-weight:700;color:#1C1C1E;">${dialInfo.name || dialInfo.phone}</div>
+        <div style="font-size:16px;font-weight:700;color:#1C1C1E;">📞 正在拨打：${dialInfo.name || dialInfo.phone}</div>
         <div style="font-size:13px;color:#8E8E93;margin-top:2px;">${dialInfo.phone}${dialInfo.note ? ' &nbsp;|&nbsp; ' + dialInfo.note : ''}</div>
       </div>` : '';
     return `
@@ -797,6 +797,12 @@ function dialFromDetail(taskId, idx) {
   const task = state.tasks.find(t => t.id == taskId);
   if (!task || !task.contacts[idx]) return;
   const c = task.contacts[idx];
+  // 在卡片上显示正在拨打
+  task.currentDialing = { name: c.name, phone: c.phone, note: c.note || '' };
+  task.status = 'running';
+  DB.update(DB.tasks, task.id, { currentDialing: task.currentDialing, status: 'running' });
+  state.tasks = DB.get(DB.tasks);
+  renderTasks();
   window.location.href = `tel:${c.phone}`;
   showToast(`正在拨打：${c.name || c.phone}`, 'info');
 }
@@ -807,8 +813,17 @@ function dialFirstPending(id) {
   if (!task) return;
   const first = task.contacts.find(x => x.dialStatus === 'pending');
   if (!first) { showToast('没有待拨打的号码了', 'warning'); return; }
+  // 在卡片上显示正在拨打
+  task.currentDialing = { name: first.name, phone: first.phone, note: first.note || '' };
+  task.status = 'running';
+  DB.update(DB.tasks, task.id, { currentDialing: task.currentDialing, status: 'running' });
+  state.tasks = DB.get(DB.tasks);
+  renderTasks();
+  // 触发实际拨打
   const idx = task.contacts.indexOf(first);
-  dialFromDetail(task.id, idx);
+  const c = task.contacts[idx];
+  window.location.href = `tel:${c.phone}`;
+  showToast(`正在拨打：${c.name || c.phone}`, 'info');
 }
 
 // 从卡片触发：打开详情并重置
