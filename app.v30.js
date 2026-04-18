@@ -165,10 +165,6 @@ function setupEventListeners() {
     renderHistory();
   });
   document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
-  // 设置
-  document.getElementById('settingsBtn').addEventListener('click', openSettings);
-  document.getElementById('settingsForm').addEventListener('submit', saveSettings);
-  document.getElementById('addCustomFieldBtn').addEventListener('click', addCustomFieldRow);
 }
 
 // ========== 页面切换 ==========
@@ -456,7 +452,6 @@ function dedupContacts(contacts) {
 function confirmManualAdd() {
   const raw = document.getElementById('manualAddInput').value.trim();
   const taskName = document.getElementById('manualTaskName').value.trim();
-  const mode = document.getElementById('manualTaskMode').value;
   if (!taskName) { showToast('请输入任务名称', 'error'); return; }
   if (!raw) { showToast('请输入至少一个号码', 'error'); return; }
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
@@ -473,7 +468,7 @@ function confirmManualAdd() {
   const task = {
     name: taskName,
     contacts,
-    mode,
+    mode: 'manual',
     status: 'pending',
     total: contacts.length,
     completed: 0,
@@ -501,13 +496,12 @@ function confirmManualAdd() {
 function confirmImportTask() {
   const taskName = document.getElementById('importTaskName').value.trim();
   const contacts = document.getElementById('importTaskDedup').checked ? dedupContacts(state.importContacts) : state.importContacts;
-  const mode = document.getElementById('importTaskMode').value;
   if (!taskName) { showToast('请输入任务名称', 'error'); return; }
   if (!contacts.length) { showToast('没有可导入的号码', 'error'); return; }
   const task = {
     name: taskName,
     contacts: contacts.map(c => ({ ...c, dialStatus: 'pending', dialedAt: null })),
-    mode,
+    mode: 'manual',
     status: 'pending',
     total: contacts.length,
     completed: 0,
@@ -673,14 +667,11 @@ function removeSelectedContact(id) {
 function saveTask(e) {
   e.preventDefault();
   const name = document.getElementById('taskName').value.trim();
-  const mode = document.getElementById('taskMode').value;
-  const orderMode = document.getElementById('taskOrderMode').value;
   if (!name) { showToast('请输入任务名称', 'error'); return; }
   if (!state.selectedContacts.length) { showToast('请选择至少一个联系人', 'error'); return; }
-  let contacts = [...state.selectedContacts].map(c => ({ ...c, dialStatus: 'pending', dialedAt: null }));
-  if (orderMode === 'random') contacts = contacts.sort(() => Math.random() - 0.5);
+  const contacts = [...state.selectedContacts].map(c => ({ ...c, dialStatus: 'pending', dialedAt: null }));
   const task = {
-    name, contacts, mode,
+    name, contacts, mode: 'manual',
     status: 'pending',
     total: contacts.length, completed: 0, failed: 0, currentIndex: 0, history: []
   };
