@@ -682,12 +682,13 @@ function executeCurrentTask() {
   task.contacts[nextIdx].dialedAt = new Date().toISOString();
 
   // 记录
+  task.completed = (task.completed || 0) + 1;
   const rec = { contactId: c?.id, name: c?.name || c.phone, phone: c?.phone, status: 'dialed', duration: 0, taskId: task.id, dialedAt: new Date().toISOString() };
   DB.add(DB.history, rec);
   state.history = DB.get(DB.history);
   task.history.push(rec);
 
-  DB.update(DB.tasks, task.id, { contacts: task.contacts, currentIndex: task.currentIndex });
+  DB.update(DB.tasks, task.id, { contacts: task.contacts, currentIndex: task.currentIndex, completed: task.completed });
   state.tasks = DB.get(DB.tasks);
   renderTasks();
 
