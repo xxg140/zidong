@@ -566,12 +566,13 @@ body {
   border-color: var(--primary);
 }
 
-/* 修复：确保按钮类样式不被 .task-actions button 覆盖 */
+/* 修复：任务卡片按钮统一蓝色背景白字 */
 .task-actions .btn-start,
-.task-actions .btn-resume { background: #007AFF !important; color: white !important; border-color: #007AFF !important; }
-.task-actions .btn-pause { background: #FF9500 !important; color: white !important; border-color: #FF9500 !important; }
-.task-actions .btn-big-next { background: #34C759 !important; color: white !important; border-color: #34C759 !important; font-size: 18px !important; padding: 14px 16px !important; }
-.task-actions .btn-detail { background: #E5E5EA !important; color: #3C3C43 !important; border-color: #E5E5EA !important; }
+.task-actions .btn-resume,
+.task-actions .btn-pause,
+.task-actions .btn-big-next,
+.task-actions .btn-detail { background: #007AFF !important; color: white !important; border-color: #007AFF !important; }
+.task-actions .btn-big-next { font-size: 18px !important; padding: 14px 16px !important; }
 .task-actions .btn-delete { background: transparent !important; border: none !important; }
 
 /* ========== 通话记录 ========== */
