@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AutoDialer - 智能自动拨号系统</title>
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
   <header class="app-header">
@@ -178,18 +178,12 @@
           <label>任务名称 <span class="required">*</span></label>
           <input type="text" id="manualTaskName" placeholder="例如：2026年4月营销外呼">
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>拨号间隔（秒）</label>
-            <input type="number" id="manualTaskInterval" value="30" min="5" max="300">
-          </div>
-          <div class="form-group">
-            <label>拨号模式</label>
-            <select id="manualTaskMode">
-              <option value="auto">自动模式</option>
-              <option value="manual" selected>手动确认模式</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label>拨号模式</label>
+          <select id="manualTaskMode">
+            <option value="auto">自动模式</option>
+            <option value="manual" selected>手动确认模式</option>
+          </select>
         </div>
       </div>
       <div class="form-actions">
@@ -226,18 +220,12 @@
           <label>任务名称 <span class="required">*</span></label>
           <input type="text" id="importTaskName" placeholder="例如：2026年4月营销外呼">
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>拨号间隔（秒）</label>
-            <input type="number" id="importTaskInterval" value="30" min="5" max="300">
-          </div>
-          <div class="form-group">
-            <label>拨号模式</label>
-            <select id="importTaskMode">
-              <option value="auto">自动模式</option>
-              <option value="manual" selected>手动确认模式 ⭐</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label>拨号模式</label>
+          <select id="importTaskMode">
+            <option value="auto">自动模式</option>
+            <option value="manual" selected>手动确认模式 ⭐</option>
+          </select>
         </div>
         <div class="form-group">
           <label><input type="checkbox" id="importTaskDedup" checked> 去除重复号码</label>
@@ -269,7 +257,6 @@
       </div>
       <!-- 操作按钮 -->
       <div class="task-detail-actions">
-        <button class="btn btn-secondary" id="reAddFailedBtn" title="将未接通的号码重置为待拨打">🔄 未接通重新拨打</button>
         <button class="btn btn-primary" id="createFailedTaskBtn" title="将未接通号码生成新任务">📋 未接通生成新任务</button>
         <button class="btn btn-danger" id="reAddAllBtn" title="将所有号码重置为待拨打">↩️ 全部重置</button>
       </div>
@@ -293,18 +280,13 @@
             <button type="button" class="btn btn-secondary" id="selectContactsBtn">+ 选择联系人</button>
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label>拨号间隔（秒）</label><input type="number" id="taskInterval" value="30" min="5" max="300"></div>
-          <div class="form-group"><label>重拨次数</label><input type="number" id="taskRetry" value="2" min="0" max="5"></div>
-        </div>
         <div class="form-group">
           <label>拨号模式</label>
           <select id="taskMode">
-            <option value="auto">自动模式（间隔后自动拨打下一个）</option>
+            <option value="auto">自动模式（自动拨打下一个）</option>
             <option value="manual" selected>手动确认模式（打完点「下一个」再拨）⭐</option>
           </select>
         </div>
-        <div class="mode-hint">💡 手动确认模式：每打完一个电话后，点任务卡片上的绿色大按钮「已挂断，拨下一个」才拨下一个，防止电话还没挂断就拨出。</div>
         <div class="form-group">
           <label>执行顺序</label>
           <select id="taskOrderMode">
@@ -378,6 +360,6 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>
