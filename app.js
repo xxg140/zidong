@@ -339,8 +339,36 @@ function handleFileImport(e) {
   if (!file) return;
   document.getElementById('importFileName').textContent = '📄 ' + file.name;
   const reader = new FileReader();
-  reader.onload = ev => parseImportFile(ev.target.result, file.name);
-  reader.readAsText(file, 'UTF-8');
+  reader.onload = function(ev) {
+    let text = ev.target.result;
+    // 如果有 UTF-8 BOM，先去掉
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    // 如果"电话"是乱码（UTF-8解码失败导致GBK内容），尝试GBK重解码
+    if (!/电话/.test(text)) {
+      const bytes = new Uint8Array(ev.target.result instanceof ArrayBuffer ? ev.target.result : new TextEncoder().encode(text));
+      // 尝试 GBK 解码
+      try {
+        const decoder = new TextDecoder('gbk');
+        text = decoder.decode(bytes);
+        // 如果GBK能匹配到"电话"，说明确实是GBK文件
+        if (/电话/.test(text)) {
+          parseImportFile(text, file.name);
+          return;
+        }
+      } catch(ex) {}
+      // 还不行就尝试 GB2312
+      try {
+        const decoder2 = new TextDecoder('gb2312');
+        text = decoder2.decode(bytes);
+        if (/电话/.test(text)) {
+          parseImportFile(text, file.name);
+          return;
+        }
+      } catch(ex2) {}
+    }
+    parseImportFile(text, file.name);
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 function parseCSVLine(line) {
