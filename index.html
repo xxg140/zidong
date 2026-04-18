@@ -7,47 +7,22 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- 顶部导航 -->
   <header class="app-header">
-    <div class="header-left">
-      <span class="logo">📞</span>
-      <h1>AutoDialer</h1>
-    </div>
-    <div class="header-right">
-      <button id="settingsBtn" class="icon-btn" title="设置">⚙️</button>
-    </div>
+    <div class="header-left"><span class="logo">📞</span><h1>AutoDialer</h1></div>
+    <div class="header-right"><button id="settingsBtn" class="icon-btn" title="设置">⚙️</button></div>
   </header>
 
-  <!-- 主内容区 -->
   <main class="main-content">
-    <!-- 左侧边栏：标签切换 -->
     <nav class="sidebar">
-      <button class="nav-item active" data-tab="contacts">
-        <span class="nav-icon">👥</span>
-        <span class="nav-label">联系人</span>
-      </button>
-      <button class="nav-item" data-tab="dialpad">
-        <span class="nav-icon">🔢</span>
-        <span class="nav-label">拨号盘</span>
-      </button>
-      <button class="nav-item" data-tab="tasks">
-        <span class="nav-icon">📋</span>
-        <span class="nav-label">任务</span>
-      </button>
-      <button class="nav-item" data-tab="history">
-        <span class="nav-icon">📜</span>
-        <span class="nav-label">记录</span>
-      </button>
-      <button class="nav-item" data-tab="stats">
-        <span class="nav-icon">📊</span>
-        <span class="nav-label">统计</span>
-      </button>
+      <button class="nav-item active" data-tab="contacts"><span class="nav-icon">👥</span><span class="nav-label">联系人</span></button>
+      <button class="nav-item" data-tab="dialpad"><span class="nav-icon">🔢</span><span class="nav-label">拨号盘</span></button>
+      <button class="nav-item" data-tab="tasks"><span class="nav-icon">📋</span><span class="nav-label">任务</span></button>
+      <button class="nav-item" data-tab="history"><span class="nav-icon">📜</span><span class="nav-label">记录</span></button>
+      <button class="nav-item" data-tab="stats"><span class="nav-icon">📊</span><span class="nav-label">统计</span></button>
     </nav>
 
-    <!-- 右侧内容区 -->
     <section class="content-area">
-      
-      <!-- ========== 联系人页面 ========== -->
+      <!-- 联系人页面 -->
       <div id="contactsPage" class="page active">
         <div class="page-header">
           <h2>联系人管理</h2>
@@ -57,42 +32,22 @@
             <button class="btn btn-secondary" id="exportContactsBtn">📤 导出</button>
           </div>
         </div>
-        
-        <!-- 搜索栏 -->
         <div class="search-bar">
           <input type="text" id="searchContacts" placeholder="搜索姓名或电话...">
-          <select id="filterGroup">
-            <option value="">全部分组</option>
-            <option value="vip">⭐ VIP客户</option>
-            <option value="cold">❄️ 冷线索</option>
-            <option value="hot">🔥 热线索</option>
-            <option value="followup">📌 待跟进</option>
-          </select>
+          <select id="filterGroup"><option value="">全部分组</option></select>
         </div>
-        
-        <!-- 联系人列表 -->
-        <div class="contact-list" id="contactList">
-          <!-- 动态生成 -->
-        </div>
-
-        <!-- 分页 -->
+        <div class="contact-list" id="contactList"></div>
         <div class="pagination" id="contactsPagination"></div>
       </div>
 
-      <!-- ========== 拨号盘页面 ========== -->
+      <!-- 拨号盘页面 -->
       <div id="dialpadPage" class="page">
-        <div class="page-header">
-          <h2>手动拨号</h2>
-        </div>
-        
+        <div class="page-header"><h2>手动拨号</h2></div>
         <div class="dialpad-container">
-          <!-- 号码显示 -->
           <div class="dial-display">
-            <input type="tel" id="dialNumber" placeholder="输入号码或选择联系人" readonly>
+            <input type="tel" id="dialNumber" placeholder="输入号码" readonly>
             <button class="dial-clear" id="dialClear">⌫</button>
           </div>
-          
-          <!-- 拨号盘 -->
           <div class="dialpad-grid">
             <button class="dial-btn" data-digit="1">1</button>
             <button class="dial-btn" data-digit="2">2<span>ABC</span></button>
@@ -107,145 +62,72 @@
             <button class="dial-btn" data-digit="0">0<span>+</span></button>
             <button class="dial-btn" data-digit="#">#</button>
           </div>
-          
-          <!-- 拨号按钮 -->
-          <div class="dial-actions">
-            <button class="btn btn-call" id="makeCallBtn">📱 立即拨打</button>
-            <button class="btn btn-secondary" id="addToTaskBtn">➕ 添加到任务</button>
+          <div class="dialpad-container-actions">
+            <button class="btn btn-call" id="makeCallBtn">📱 拨打</button>
           </div>
         </div>
       </div>
 
-      <!-- ========== 任务页面 ========== -->
+      <!-- 任务页面 -->
       <div id="tasksPage" class="page">
         <div class="page-header">
           <h2>自动拨号任务</h2>
           <div class="header-actions">
             <button class="btn btn-primary" id="createTaskBtn">+ 新建任务</button>
+            <button class="btn btn-secondary" id="importTaskBtn">📥 导入任务</button>
           </div>
         </div>
-        
-        <!-- 任务状态概览 -->
         <div class="task-overview">
-          <div class="stat-card">
-            <div class="stat-icon">📋</div>
-            <div class="stat-info">
-              <div class="stat-value" id="totalTasks">0</div>
-              <div class="stat-label">总任务</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">⏳</div>
-            <div class="stat-info">
-              <div class="stat-value" id="pendingTasks">0</div>
-              <div class="stat-label">待执行</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-info">
-              <div class="stat-value" id="completedTasks">0</div>
-              <div class="stat-label">已完成</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">🔄</div>
-            <div class="stat-info">
-              <div class="stat-value" id="runningTasks">0</div>
-              <div class="stat-label">执行中</div>
-            </div>
-          </div>
+          <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-info"><div class="stat-value" id="totalTasks">0</div><div class="stat-label">总任务</div></div></div>
+          <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-info"><div class="stat-value" id="pendingTasks">0</div><div class="stat-label">待执行</div></div></div>
+          <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-info"><div class="stat-value" id="completedTasks">0</div><div class="stat-label">已完成</div></div></div>
+          <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-info"><div class="stat-value" id="runningTasks">0</div><div class="stat-label">执行中</div></div></div>
         </div>
-        
-        <!-- 任务列表 -->
-        <div class="task-list" id="taskList">
-          <!-- 动态生成 -->
-        </div>
+        <div class="task-list" id="taskList"></div>
       </div>
 
-      <!-- ========== 通话记录页面 ========== -->
+      <!-- 通话记录页面 -->
       <div id="historyPage" class="page">
         <div class="page-header">
           <h2>通话记录</h2>
           <div class="header-actions">
-            <button class="btn btn-secondary" id="exportHistoryBtn">📤 导出记录</button>
+            <button class="btn btn-secondary" id="exportHistoryBtn">📤 导出</button>
             <button class="btn btn-danger" id="clearHistoryBtn">🗑️ 清空</button>
           </div>
         </div>
-        
-        <!-- 筛选 -->
         <div class="filter-bar">
-          <select id="historyStatus">
-            <option value="">全部状态</option>
-            <option value="completed">已接通</option>
-            <option value="missed">未接通</option>
-            <option value="failed">拨打失败</option>
-          </select>
+          <select id="historyStatus"><option value="">全部状态</option><option value="completed">已接通</option><option value="missed">未接通</option><option value="failed">拨打失败</option></select>
           <input type="date" id="historyDateFrom">
           <input type="date" id="historyDateTo">
           <button class="btn btn-secondary" id="filterHistoryBtn">筛选</button>
         </div>
-        
-        <!-- 记录列表 -->
-        <div class="history-list" id="historyList">
-          <!-- 动态生成 -->
-        </div>
+        <div class="history-list" id="historyList"></div>
       </div>
 
-      <!-- ========== 统计页面 ========== -->
+      <!-- 统计页面 -->
       <div id="statsPage" class="page">
         <div class="page-header">
           <h2>数据统计</h2>
           <div class="header-actions">
-            <select id="statsPeriod">
-              <option value="7">最近7天</option>
-              <option value="30" selected>最近30天</option>
-              <option value="90">最近90天</option>
-            </select>
+            <select id="statsPeriod"><option value="7">最近7天</option><option value="30" selected>最近30天</option><option value="90">最近90天</option></select>
             <button class="btn btn-secondary" id="exportStatsBtn">📊 导出报告</button>
           </div>
         </div>
-        
-        <!-- 概览统计 -->
         <div class="stats-overview">
-          <div class="big-stat">
-            <div class="big-stat-value" id="totalCalls">0</div>
-            <div class="big-stat-label">总拨打量</div>
-          </div>
-          <div class="big-stat">
-            <div class="big-stat-value" id="avgConnectRate">0%</div>
-            <div class="big-stat-label">平均接通率</div>
-          </div>
-          <div class="big-stat">
-            <div class="big-stat-value" id="avgDuration">0秒</div>
-            <div class="big-stat-label">平均通话时长</div>
-          </div>
+          <div class="big-stat"><div class="big-stat-value" id="totalCalls">0</div><div class="big-stat-label">总拨打量</div></div>
+          <div class="big-stat"><div class="big-stat-value" id="avgConnectRate">0%</div><div class="big-stat-label">平均接通率</div></div>
+          <div class="big-stat"><div class="big-stat-value" id="avgDuration">0秒</div><div class="big-stat-label">平均通话时长</div></div>
         </div>
-        
-        <!-- 图表区域 -->
         <div class="charts-container">
-          <div class="chart-card">
-            <h3>每日拨打电话趋势</h3>
-            <div class="chart" id="dailyChart"></div>
-          </div>
-          <div class="chart-card">
-            <h3>接通率分布</h3>
-            <div class="chart" id="connectRateChart"></div>
-          </div>
+          <div class="chart-card"><h3>每日拨打电话趋势</h3><div class="chart" id="dailyChart"></div></div>
+          <div class="chart-card"><h3>接通率分布</h3><div class="chart" id="connectRateChart"></div></div>
         </div>
-        
-        <!-- 排行榜 -->
-        <div class="leaderboard">
-          <h3>TOP 联系人（按通话次数）</h3>
-          <div id="topContactsList"></div>
-        </div>
+        <div class="leaderboard"><h3>TOP 联系人（按通话次数）</h3><div id="topContactsList"></div></div>
       </div>
     </section>
   </main>
 
-  <!-- ========== 模态框 ========== -->
-  
-  <!-- 新建联系人模态框 -->
+  <!-- 新建/编辑联系人 -->
   <div class="modal" id="contactModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -254,28 +136,11 @@
       </div>
       <form id="contactForm">
         <input type="hidden" id="contactId">
-        <div class="form-group">
-          <label>姓名 *</label>
-          <input type="text" id="contactName" required placeholder="输入联系人姓名">
-        </div>
-        <div class="form-group">
-          <label>电话 *</label>
-          <input type="tel" id="contactPhone" required placeholder="输入电话号码">
-        </div>
-        <div class="form-group">
-          <label>分组</label>
-          <select id="contactGroup">
-            <option value="">无分组</option>
-            <option value="vip">⭐ VIP客户</option>
-            <option value="cold">❄️ 冷线索</option>
-            <option value="hot">🔥 热线索</option>
-            <option value="followup">📌 待跟进</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>备注</label>
-          <textarea id="contactNote" rows="3" placeholder="添加备注信息..."></textarea>
-        </div>
+        <div class="form-group"><label>姓名 <span class="required">*</span></label><input type="text" id="contactName" required placeholder="输入联系人姓名"></div>
+        <div class="form-group"><label>电话 <span class="required">*</span></label><input type="tel" id="contactPhone" required placeholder="输入电话号码"></div>
+        <div class="form-group"><label>分组</label><select id="contactGroup"><option value="">无分组</option></select></div>
+        <div id="customFieldsContainer"></div>
+        <div class="form-group"><label>备注</label><textarea id="contactNote" rows="3" placeholder="添加备注..."></textarea></div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" data-modal="contactModal">取消</button>
           <button type="submit" class="btn btn-primary">保存</button>
@@ -284,72 +149,115 @@
     </div>
   </div>
 
-  <!-- 批量导入模态框 -->
+  <!-- 导入模态框 -->
   <div class="modal" id="importModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>批量导入联系人</h3>
+        <h3>导入数据</h3>
         <button class="modal-close" data-modal="importModal">×</button>
       </div>
-      <div class="import-area" id="importDropZone">
-        <div class="import-icon">📁</div>
-        <p>拖拽文件到此处，或点击选择文件</p>
-        <p class="import-hint">支持 CSV、TXT、Excel 格式</p>
-        <input type="file" id="importFileInput" accept=".csv,.txt,.xlsx,.xls" hidden>
-        <button class="btn btn-primary" id="selectFileBtn">选择文件</button>
+      <!-- 模式切换 -->
+      <div class="import-tabs">
+        <button class="import-tab active" data-import-tab="contacts" id="tabContacts">📇 导入联系人</button>
+        <button class="import-tab" data-import-tab="task" id="tabTask">📋 导入并创建任务</button>
       </div>
-      <div class="import-preview" id="importPreview" style="display:none;">
-        <h4>预览数据（显示前5条）</h4>
-        <div id="previewTable"></div>
+
+      <!-- 模板+文件选择 -->
+      <div class="import-section">
+        <div style="padding:16px 20px 0;display:flex;justify-content:space-between;align-items:center;">
+          <button class="btn btn-secondary" id="downloadTemplateBtn">📥 下载导入模板</button>
+          <label class="btn btn-primary" style="cursor:pointer;">选择文件<input type="file" id="importFileInput" accept=".csv,.txt,.xlsx,.xls" hidden></label>
+        </div>
+        <div class="import-drop-zone" id="importDropZone" style="margin:16px 20px;">
+          <div class="import-icon">📁</div>
+          <p>将文件拖到此处，或点击「选择文件」</p>
+          <p class="import-hint">支持 CSV / TXT</p>
+        </div>
+        <div id="importFileName" style="text-align:center;font-size:13px;color:#007AFF;font-weight:500;padding:0 20px;"></div>
+      </div>
+
+      <!-- 导入联系人选项 -->
+      <div id="importContactsOptions" class="import-section" style="padding:0 20px 20px;display:none;">
+        <div class="form-group" style="margin-top:8px;">
+          <label><input type="checkbox" id="importDedup"> 去除重复号码（按电话号码去重）</label>
+        </div>
+        <div id="importContactsPreview" style="display:none;margin-bottom:12px;">
+          <div style="font-size:13px;color:#8E8E93;margin-bottom:8px;">预览：共 <strong id="importContactsCount">0</strong> 条</div>
+          <div id="importContactsPreviewList" style="background:#F2F2F7;border-radius:8px;padding:8px;font-size:12px;max-height:100px;overflow-y:auto;color:#3C3C43;"></div>
+        </div>
         <div class="form-actions">
-          <button class="btn btn-secondary" id="cancelImportBtn">取消</button>
-          <button class="btn btn-primary" id="confirmImportBtn">确认导入</button>
+          <button type="button" class="btn btn-secondary" data-modal="importModal">取消</button>
+          <button class="btn btn-primary" id="confirmImportContactsBtn">确认导入</button>
+        </div>
+      </div>
+
+      <!-- 导入任务选项 -->
+      <div id="importTaskOptions" class="import-section" style="padding:0 20px 20px;display:none;">
+        <div class="form-group" style="margin-top:8px;">
+          <label>任务名称 <span class="required">*</span></label>
+          <input type="text" id="importTaskName" placeholder="例如：2026年4月营销外呼">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>拨号间隔（秒）</label>
+            <input type="number" id="importTaskInterval" value="30" min="5" max="300">
+          </div>
+          <div class="form-group">
+            <label>拨号模式</label>
+            <select id="importTaskMode">
+              <option value="auto">自动模式</option>
+              <option value="manual" selected>手动确认模式 ⭐</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" id="importTaskDedup" checked> 去除重复号码</label>
+        </div>
+        <div id="importTaskPreviewArea" style="display:none;margin-bottom:12px;">
+          <div style="font-size:13px;color:#8E8E93;margin-bottom:8px;">预览：共 <strong id="importTaskCount">0</strong> 个号码</div>
+          <div id="importTaskPreviewList" style="background:#F2F2F7;border-radius:8px;padding:8px;font-size:12px;max-height:100px;overflow-y:auto;color:#3C3C43;"></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" data-modal="importModal">取消</button>
+          <button class="btn btn-primary" id="confirmImportTaskBtn">创建任务并开始</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 新建任务模态框 -->
+  <!-- 新建任务 -->
   <div class="modal" id="taskModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>新建拨号任务</h3>
+        <h3 id="taskModalTitle">新建拨号任务</h3>
         <button class="modal-close" data-modal="taskModal">×</button>
       </div>
       <form id="taskForm">
+        <div class="form-group"><label>任务名称 <span class="required">*</span></label><input type="text" id="taskName" required placeholder="给任务起个名字"></div>
         <div class="form-group">
-          <label>任务名称 *</label>
-          <input type="text" id="taskName" required placeholder="给任务起个名字">
-        </div>
-        <div class="form-group">
-          <label>选择联系人 *</label>
+          <label>选择联系人 <span class="required">*</span></label>
           <div class="contact-selector">
-            <div class="selected-contacts" id="selectedContacts">
-              <!-- 已选联系人 -->
-            </div>
+            <div class="selected-contacts" id="selectedContacts"></div>
             <button type="button" class="btn btn-secondary" id="selectContactsBtn">+ 选择联系人</button>
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group">
-            <label>拨号间隔（秒）</label>
-            <input type="number" id="taskInterval" value="30" min="5" max="300">
-          </div>
-          <div class="form-group">
-            <label>重拨次数</label>
-            <input type="number" id="taskRetry" value="2" min="0" max="5">
-          </div>
+          <div class="form-group"><label>拨号间隔（秒）</label><input type="number" id="taskInterval" value="30" min="5" max="300"></div>
+          <div class="form-group"><label>重拨次数</label><input type="number" id="taskRetry" value="2" min="0" max="5"></div>
         </div>
         <div class="form-group">
-          <label>开始时间</label>
-          <input type="datetime-local" id="taskStartTime">
-        </div>
-        <div class="form-group">
-          <label>执行模式</label>
+          <label>拨号模式</label>
           <select id="taskMode">
-            <option value="sequential">顺序拨打</option>
+            <option value="auto">自动模式（间隔后自动拨打下一个）</option>
+            <option value="manual" selected>手动确认模式（打完点「下一个」再拨）⭐</option>
+          </select>
+        </div>
+        <div class="mode-hint">💡 手动确认模式：每打完一个电话后，点浮动面板「下一个」才拨下一个，防止电话还没挂断就拨出。</div>
+        <div class="form-group">
+          <label>执行顺序</label>
+          <select id="taskOrderMode">
+            <option value="sequential">按顺序拨打</option>
             <option value="random">随机顺序</option>
-            <option value="priority">按优先级</option>
           </select>
         </div>
         <div class="form-actions">
@@ -360,27 +268,28 @@
     </div>
   </div>
 
-  <!-- 联系人选择器模态框 -->
+  <!-- 联系人选择器 -->
   <div class="modal" id="contactPickerModal">
     <div class="modal-content modal-large">
       <div class="modal-header">
         <h3>选择联系人</h3>
         <button class="modal-close" data-modal="contactPickerModal">×</button>
       </div>
-      <div class="search-bar">
-        <input type="text" id="pickerSearch" placeholder="搜索联系人...">
+      <div class="search-bar" style="padding:0 16px;">
+        <input type="text" id="pickerSearch" placeholder="搜索姓名或电话...">
       </div>
-      <div class="picker-list" id="pickerContactList">
-        <!-- 动态生成 -->
-      </div>
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" data-modal="contactPickerModal">取消</button>
-        <button type="button" class="btn btn-primary" id="confirmSelectionBtn">确认选择</button>
+      <div class="picker-list" id="pickerContactList"></div>
+      <div class="picker-footer">
+        <span id="pickerCount">已选 0 个</span>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-secondary" data-modal="contactPickerModal">取消</button>
+          <button type="button" class="btn btn-primary" id="confirmSelectionBtn">确认</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- 设置模态框 -->
+  <!-- 设置 -->
   <div class="modal" id="settingsModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -389,18 +298,10 @@
       </div>
       <form id="settingsForm">
         <div class="form-group">
-          <label>拨号延迟（秒）</label>
-          <input type="number" id="settingDialDelay" value="3" min="1" max="10">
-          <small>点击拨号后，等待几秒再打开电话应用</small>
-        </div>
-        <div class="form-group">
           <label>工作时间段</label>
           <div class="time-range">
-            <input type="time" id="settingWorkStart" value="09:00">
-            <span>至</span>
-            <input type="time" id="settingWorkEnd" value="18:00">
+            <input type="time" id="settingWorkStart" value="09:00"><span>至</span><input type="time" id="settingWorkEnd" value="18:00">
           </div>
-          <small>仅在此时间段内执行自动拨号</small>
         </div>
         <div class="form-group">
           <label>休息日</label>
@@ -409,11 +310,23 @@
             <label><input type="checkbox" id="restSun" checked> 周日</label>
           </div>
         </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section-title">📋 分组管理</div>
+        <div class="form-group">
+          <label>联系人分组（每行一个）</label>
+          <textarea id="settingGroups" rows="4" placeholder="VIP客户&#10;热线索&#10;冷线索&#10;待跟进"></textarea>
+          <small>每行一个分组，修改后保存</small>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section-title">🗂️ 自定义字段</div>
+        <div id="customFieldSettings"></div>
+        <button type="button" class="btn btn-secondary" id="addCustomFieldBtn" style="margin-bottom:12px;width:100%;font-size:13px;">+ 添加自定义字段</button>
+        <div class="settings-divider"></div>
         <div class="form-group">
           <label>数据存储</label>
           <select id="settingStorage">
-            <option value="local">本地存储</option>
-            <option value="cloud">云端同步（需要配置）</option>
+            <option value="local">本地存储（浏览器内）</option>
+            <option value="cloud" disabled>云端同步（即将推出）</option>
           </select>
         </div>
         <div class="form-actions">
@@ -424,44 +337,21 @@
     </div>
   </div>
 
-  <!-- 拨号确认提示 -->
-  <div class="modal" id="callConfirmModal">
-    <div class="modal-content modal-small">
-      <div class="modal-header">
-        <h3>确认拨号</h3>
-        <button class="modal-close" data-modal="callConfirmModal">×</button>
-      </div>
-      <div class="call-confirm-content">
-        <div class="call-icon">📞</div>
-        <p class="call-number" id="confirmCallNumber"></p>
-        <p class="call-name" id="confirmCallName"></p>
-      </div>
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" data-modal="callConfirmModal">取消</button>
-        <button type="button" class="btn btn-call" id="confirmCallBtn">确认拨打</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast 提示 -->
   <div class="toast" id="toast"></div>
 
-  <!-- 任务执行浮窗 -->
+  <!-- 浮动拨号面板 -->
   <div class="floating-panel" id="floatingPanel" style="display:none;">
     <div class="floating-header">
-      <span class="floating-title">🔄 任务执行中</span>
+      <span class="floating-title" id="floatingTitle">🔄 任务执行中</span>
       <button class="floating-close" id="stopTaskBtn">停止</button>
     </div>
     <div class="floating-content">
       <div class="floating-progress">
         <div class="progress-text" id="progressText">0 / 0</div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
       </div>
-      <div class="floating-current" id="floatingCurrent">
-        正在拨打：-
-      </div>
+      <div class="floating-current" id="floatingCurrent">正在拨打：-</div>
+      <button class="btn-next-call" id="nextCallBtn" style="display:none;width:100%;margin-top:8px;padding:10px;border:none;border-radius:8px;background:#34C759;color:white;font-weight:600;cursor:pointer;font-size:14px;">✅ 已挂断，拨下一个</button>
     </div>
   </div>
 
