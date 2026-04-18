@@ -503,9 +503,9 @@ function renderTasks() {
     return;
   }
   c.innerHTML = state.tasks.map(task => {
-    const prog = task.total > 0 ? Math.round((task.completed / task.total) * 100) : 0;
-    const modeLabel = task.mode === 'manual' ? '🔖 手动确认' : '⚡ 自动';
     const called = task.contacts.filter(x => x.dialStatus !== 'pending').length;
+    const prog = task.total > 0 ? Math.round((called / task.total) * 100) : 0;
+    const modeLabel = task.mode === 'manual' ? '🔖 手动确认' : '⚡ 自动';
     const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
     const notAnswered = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering').length;
     const pending = task.total - called;
@@ -672,8 +672,6 @@ function executeCurrentTask() {
 
   task.currentIndex = nextIdx;
   const c = task.contacts[nextIdx];
-  updateFloatingPanel(nextIdx + 1, task.total, c?.name || c?.phone || '-');
-
   // 拨打电话
   if (c) doDial(c.name || c.phone, c.phone, c.id);
 
@@ -690,6 +688,9 @@ function executeCurrentTask() {
 
   DB.update(DB.tasks, task.id, { contacts: task.contacts, currentIndex: task.currentIndex, completed: task.completed });
   state.tasks = DB.get(DB.tasks);
+  // 更新进度：统计已拨打的数量
+  const called = task.contacts.filter(x => x.dialStatus !== 'pending').length;
+  updateFloatingPanel(called, task.total, c?.name || c?.phone || '-');
   renderTasks();
 
   // 自动模式：定时拨打下一个；手动模式：等待用户点击
