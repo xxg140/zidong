@@ -495,22 +495,28 @@ function renderTasks() {
   document.getElementById('runningTasks').textContent = state.tasks.filter(t => t.status === 'running').length;
   const c = document.getElementById('taskList');
   if (!state.tasks.length) {
-    c.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>暂无拨号任务</p><button class="btn btn-primary" id="emptyCreateTaskBtn">新建任务</button></div>';
-    document.getElementById('emptyCreateTaskBtn').addEventListener('click', () => { resetTaskForm(); openModal('taskModal'); });
+    c.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>暂无拨号任务</p><p style="font-size:13px;color:#8E8E93;">点击上方「导入任务」按钮，从文件创建</p></div>';
     return;
   }
   c.innerHTML = state.tasks.map(task => {
     const called = task.contacts.filter(x => x.dialStatus !== 'pending').length;
+    const pending = task.contacts.filter(x => x.dialStatus === 'pending').length;
     const prog = task.total > 0 ? Math.round((called / task.total) * 100) : 0;
     const modeLabel = task.mode === 'manual' ? '🔖 手动确认' : '⚡ 自动';
     const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
-    const notAnswered = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering').length;
-    const pending = task.total - called;
+    const notAnswered = called - connected;
     const statusDots = task.contacts.map(x => {
       if (x.dialStatus === 'connected') return '<span style="color:#34C759;font-size:11px;">●</span>';
       if (x.dialStatus === 'called' || x.dialStatus === 'not_answering') return '<span style="color:#FF9500;font-size:11px;">●</span>';
       return '<span style="color:#C7C7CC;font-size:11px;">○</span>';
     }).join('');
+    // 当前拨打信息
+    const dialInfo = task.currentDialing;
+    const dialInfoHtml = (task.status === 'running' && dialInfo) ? `
+      <div class="dial-current-info">
+        <div style="font-size:16px;font-weight:700;color:#1C1C1E;">${dialInfo.name || dialInfo.phone}</div>
+        <div style="font-size:13px;color:#8E8E93;margin-top:2px;">${dialInfo.phone}${dialInfo.note ? ' &nbsp;|&nbsp; ' + dialInfo.note : ''}</div>
+      </div>` : '';
     return `
       <div class="task-card" data-id="${task.id}">
         <div class="task-header">
@@ -527,6 +533,7 @@ function renderTasks() {
           <span class="status-badge warning">📞已拨打 ${notAnswered}</span>
           <span class="status-badge gray">○待拨打 ${pending}</span>
         </div>
+        ${dialInfoHtml}
         <div class="task-dots-row" title="●已接通 ●已拨打 ○待拨打">${statusDots}</div>
         <div class="task-progress">
           <div class="task-progress-bar"><div class="task-progress-fill" style="width:${prog}%"></div></div>
@@ -535,7 +542,7 @@ function renderTasks() {
         <div class="task-actions">
           <button class="btn-detail" data-action="detail" data-id="${task.id}">📋 详情</button>
           ${task.status === 'pending' ? `<button class="btn-start" data-action="start" data-id="${task.id}">▶️ 开始</button>` : ''}
-          ${task.status === 'running' && task.mode === 'manual' ? `<button class="btn-big-next" data-action="next-now" data-id="${task.id}">☎️ 已挂断，拨下一个</button>` : ''}
+          ${task.status === 'running' && task.mode === 'manual' && pending > 0 ? `<button class="btn-big-next" data-action="next-now" data-id="${task.id}">☎️ 已挂断，拨下一个</button>` : ''}
           ${task.status === 'running' ? `<button class="btn-pause" data-action="pause" data-id="${task.id}">⏸️ 暂停</button>` : ''}
           ${task.status === 'paused' ? `<button class="btn-resume" data-action="resume" data-id="${task.id}">▶️ 继续</button>` : ''}
           <button class="btn-delete" data-action="delete" data-id="${task.id}">🗑️</button>
@@ -659,14 +666,13 @@ function executeCurrentTask() {
   const task = state.currentTask;
   if (!task || task.status !== 'running') return;
 
-  // 跳过已拨打的，找到下一个待拨打的
+  // 找到所有待拨打的号码（从头搜索，更稳定）
   let nextIdx = -1;
-  for (let i = task.currentIndex; i < task.contacts.length; i++) {
+  for (let i = 0; i < task.contacts.length; i++) {
     if (task.contacts[i].dialStatus === 'pending') { nextIdx = i; break; }
   }
   if (nextIdx === -1) { finishTask(task); return; }
 
-  task.currentIndex = nextIdx;
   const c = task.contacts[nextIdx];
   // 拨打电话
   if (c) doDial(c.name || c.phone, c.phone, c.id);
@@ -682,7 +688,11 @@ function executeCurrentTask() {
   state.history = DB.get(DB.history);
   task.history.push(rec);
 
-  DB.update(DB.tasks, task.id, { contacts: task.contacts, currentIndex: task.currentIndex, completed: task.completed });
+  // 统计当前进度
+  const called = task.contacts.filter(x => x.dialStatus !== 'pending').length;
+  task.currentDialing = c ? { name: c.name, phone: c.phone, note: c.note } : null;
+
+  DB.update(DB.tasks, task.id, { contacts: task.contacts, completed: task.completed, currentDialing: task.currentDialing });
   state.tasks = DB.get(DB.tasks);
   renderTasks();
 
@@ -759,17 +769,18 @@ function renderTaskDetailList(task) {
     };
     const st = statusMap[x.dialStatus] || statusMap.pending;
     const timeStr = x.dialedAt ? new Date(x.dialedAt).toLocaleString('zh-CN') : '-';
-    const canRedial = x.dialStatus !== 'pending';
     return `<div class="detail-item" data-idx="${i}">
       <div class="detail-icon ${st.cls}">${st.icon}</div>
       <div class="detail-info">
         <div class="detail-name">${x.name || x.phone}</div>
         <div class="detail-phone">${x.phone}</div>
         <div class="detail-time">${timeStr}</div>
+        ${x.note ? `<div class="detail-note">📝 ${x.note}</div>` : ''}
       </div>
       <div class="detail-right">
         <span class="detail-badge ${st.cls}">${st.label}</span>
-        <button class="btn-redial-sm" onclick="reDialContact('${task.id}', ${i})" title="重新拨打">🔄</button>
+        <button class="btn-dial-sm" onclick="dialFromDetail('${task.id}', ${i})" title="手动拨打">📞</button>
+        <button class="btn-redial-sm" onclick="reDialContact('${task.id}', ${i})" title="重置并重新拨打">🔄</button>
       </div>
     </div>`;
   }).join('');
@@ -777,6 +788,14 @@ function renderTaskDetailList(task) {
 
 function handleTaskDetailAction(e) {
   // handled by inline onclick
+}
+
+function dialFromDetail(taskId, idx) {
+  const task = state.tasks.find(t => t.id == taskId);
+  if (!task || !task.contacts[idx]) return;
+  const c = task.contacts[idx];
+  window.location.href = `tel:${c.phone}`;
+  showToast(`正在拨打：${c.name || c.phone}`, 'info');
 }
 
 function reDialContact(taskId, idx) {
