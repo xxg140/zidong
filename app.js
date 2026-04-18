@@ -103,6 +103,8 @@ function setupEventListeners() {
   // 任务
   document.getElementById('taskList').addEventListener('click', handleTaskAction);
   document.getElementById('closeTaskDetailBtn').addEventListener('click', () => closeModal('taskDetailModal'));
+  document.getElementById('reAddAllBtn').addEventListener('click', reAddAllContacts);
+  document.getElementById('createFailedTaskBtn').addEventListener('click', createFailedTask);
   document.getElementById('selectContactsBtn').addEventListener('click', openContactPicker);
   document.getElementById('confirmSelectionBtn').addEventListener('click', confirmSelection);
   document.getElementById('pickerSearch').addEventListener('input', renderPickerContacts);
@@ -538,10 +540,8 @@ function renderTasks() {
           <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${called} / ${task.total} (${prog}%)</div>
         </div>
         <div class="task-actions">
-          ${task.status === 'pending' ? `<button class="btn-start" data-action="start" data-id="${task.id}">▶️ 开始</button>` : ''}
-          ${task.status === 'running' && task.mode === 'manual' && pending > 0 ? `<button class="btn-start" data-action="next-now" data-id="${task.id}">▶️ 开始</button>` : ''}
-          ${task.status === 'running' ? `<button class="btn-pause" data-action="pause" data-id="${task.id}">⏸️ 暂停</button>` : ''}
-          ${task.status === 'paused' ? `<button class="btn-start" data-action="resume" data-id="${task.id}">▶️ 继续</button>` : ''}
+          ${called > 0 ? `<button class="btn btn-secondary" onclick="openDetailAndReset('${task.id}')" style="font-size:13px;padding:6px 12px;">🔄 重置全部</button>` : ''}
+          ${notAnswered > 0 ? `<button class="btn btn-warning" onclick="openDetailAndCreateFailed('${task.id}')" style="font-size:13px;padding:6px 12px;">📋 未接通生成</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -550,20 +550,15 @@ function renderTasks() {
 function getStatusLabel(s) { return { pending: '待执行', running: '执行中', paused: '已暂停', completed: '已完成' }[s] || s; }
 
 function handleTaskAction(e) {
-  // 如果点击的是按钮，处理按钮操作
   const btn = e.target.closest('button[data-action]');
   if (btn) {
     e.stopPropagation();
     const action = btn.dataset.action;
     const id = btn.dataset.id;
     if (action === 'delete') { deleteTask(id); return; }
-    if (action === 'start') { startTask(id); return; }
-    if (action === 'pause') { pauseTask(id); return; }
-    if (action === 'resume') { resumeTask(id); return; }
-    if (action === 'next-now') { executeCurrentTask(); return; }
     return;
   }
-  // 否则点击卡片 → 进入详情
+  // 点击卡片 → 进入详情
   const card = e.target.closest('.task-card');
   if (card) { openTaskDetail(card.dataset.id); }
 }
@@ -768,6 +763,57 @@ function dialFromDetail(taskId, idx) {
   const c = task.contacts[idx];
   window.location.href = `tel:${c.phone}`;
   showToast(`正在拨打：${c.name || c.phone}`, 'info');
+}
+
+// 从卡片触发：打开详情并重置
+function openDetailAndReset(id) {
+  openTaskDetail(id);
+  setTimeout(() => reAddAllContacts(), 100);
+}
+
+// 从卡片触发：打开详情并生成未接通任务
+function openDetailAndCreateFailed(id) {
+  const task = state.tasks.find(t => t.id == id);
+  if (!task) return;
+  currentDetailTask = task;
+  createFailedTask();
+}
+
+// 重置任务所有号码为待拨打
+function reAddAllContacts() {
+  if (!currentDetailTask) return;
+  currentDetailTask.contacts.forEach(c => { c.dialStatus = 'pending'; c.dialedAt = null; });
+  currentDetailTask.status = 'pending';
+  DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts, status: 'pending' });
+  state.tasks = DB.get(DB.tasks);
+  renderTaskDetailList(currentDetailTask);
+  renderTasks();
+  showToast('已全部重置为待拨打状态', 'success');
+}
+
+// 将未接号码生成新任务
+function createFailedTask() {
+  if (!currentDetailTask) return;
+  const failed = currentDetailTask.contacts.filter(c => c.dialStatus === 'called' || c.dialStatus === 'not_answering');
+  if (!failed.length) { showToast('没有未接通的号码', 'warning'); return; }
+  const newContacts = failed.map(c => ({ ...c, dialStatus: 'pending', dialedAt: null }));
+  const taskName = `${currentDetailTask.name} - 未接通重拨`;
+  const task = {
+    name: taskName,
+    contacts: newContacts,
+    mode: currentDetailTask.mode || 'manual',
+    status: 'pending',
+    total: newContacts.length,
+    completed: 0,
+    failed: 0,
+    currentIndex: 0,
+    history: []
+  };
+  DB.add(DB.tasks, task);
+  state.tasks = DB.get(DB.tasks);
+  renderTasks();
+  closeModal('taskDetailModal');
+  showToast(`新任务「${taskName}」已创建 (${newContacts.length}个未接号码)`, 'success');
 }
 
 // ========== 通话记录 ==========
