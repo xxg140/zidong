@@ -225,6 +225,22 @@
     </div>
   </div>
 
+  <!-- 任务详情弹窗 -->
+  <div class="modal" id="taskDetailModal">
+    <div class="modal-content modal-large" style="max-height:85vh;">
+      <div class="modal-header">
+        <h3>📋 任务详情 — <span id="taskDetailTitle"></span></h3>
+        <button class="modal-close" id="closeTaskDetailBtn">×</button>
+      </div>
+      <div class="task-detail-actions">
+        <button class="btn btn-secondary" id="reAddFailedBtn">🔄 重置未接号码</button>
+        <button class="btn btn-primary" id="reAddAllBtn">↩️ 全部重置</button>
+        <button class="btn btn-warning" id="resetTaskStatusBtn">🔁 重置所有状态</button>
+      </div>
+      <div class="detail-list" id="taskDetailList"></div>
+    </div>
+  </div>
+
   <!-- 新建任务 -->
   <div class="modal" id="taskModal">
     <div class="modal-content">

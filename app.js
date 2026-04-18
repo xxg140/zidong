@@ -103,12 +103,17 @@ function setupEventListeners() {
   document.getElementById('makeCallBtn').addEventListener('click', dialNow);
   // 任务
   document.getElementById('createTaskBtn').addEventListener('click', () => { resetTaskForm(); openModal('taskModal'); });
+  document.getElementById('taskList').addEventListener('click', handleTaskAction);
+  document.getElementById('taskDetailList').addEventListener('click', handleTaskDetailAction);
   document.getElementById('selectContactsBtn').addEventListener('click', openContactPicker);
   document.getElementById('confirmSelectionBtn').addEventListener('click', confirmSelection);
   document.getElementById('pickerSearch').addEventListener('input', renderPickerContacts);
   document.getElementById('taskForm').addEventListener('submit', saveTask);
-  document.getElementById('taskList').addEventListener('click', handleTaskAction);
   document.getElementById('taskMode').addEventListener('change', updateModeHint);
+  document.getElementById('closeTaskDetailBtn').addEventListener('click', () => closeModal('taskDetailModal'));
+  document.getElementById('resetTaskStatusBtn').addEventListener('click', resetTaskDetailStatus);
+  document.getElementById('reAddFailedBtn').addEventListener('click', reAddFailedContacts);
+  document.getElementById('reAddAllBtn').addEventListener('click', reAddAllContacts);
   // 通话记录
   document.getElementById('filterHistoryBtn').addEventListener('click', renderHistory);
   document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
@@ -408,7 +413,7 @@ function confirmImportTask() {
   if (!contacts.length) { showToast('没有可导入的号码', 'error'); return; }
   const task = {
     name: taskName,
-    contacts: contacts,
+    contacts: contacts.map(c => ({ ...c, dialStatus: 'pending', dialedAt: null })),
     interval,
     mode,
     status: 'pending',
@@ -455,12 +460,22 @@ function renderTasks() {
   document.getElementById('runningTasks').textContent = state.tasks.filter(t => t.status === 'running').length;
   const c = document.getElementById('taskList');
   if (!state.tasks.length) {
-    c.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>暂无拨号任务</p><button class="btn btn-primary" onclick="document.getElementById(\'createTaskBtn\').click()">新建任务</button></div>';
+    c.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>暂无拨号任务</p><button class="btn btn-primary" id="emptyCreateTaskBtn">新建任务</button></div>';
+    document.getElementById('emptyCreateTaskBtn').addEventListener('click', () => { resetTaskForm(); openModal('taskModal'); });
     return;
   }
   c.innerHTML = state.tasks.map(task => {
     const prog = task.total > 0 ? Math.round((task.completed / task.total) * 100) : 0;
     const modeLabel = task.mode === 'manual' ? '🔖 手动确认' : '⚡ 自动';
+    const called = task.contacts.filter(x => x.dialStatus !== 'pending').length;
+    const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
+    const notAnswered = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering').length;
+    const pending = task.total - called;
+    const statusDots = task.contacts.map(x => {
+      if (x.dialStatus === 'connected') return '<span style="color:#34C759;font-size:11px;">●</span>';
+      if (x.dialStatus === 'called' || x.dialStatus === 'not_answering') return '<span style="color:#FF9500;font-size:11px;">●</span>';
+      return '<span style="color:#C7C7CC;font-size:11px;">○</span>';
+    }).join('');
     return `
       <div class="task-card" data-id="${task.id}">
         <div class="task-header">
@@ -472,16 +487,23 @@ function renderTasks() {
           <span>⏱️ ${task.interval}秒</span>
           <span>${modeLabel}</span>
         </div>
+        <div class="task-status-summary">
+          <span class="status-badge success">✅已接通 ${connected}</span>
+          <span class="status-badge warning">📞已拨打 ${notAnswered}</span>
+          <span class="status-badge gray">○待拨打 ${pending}</span>
+        </div>
+        <div class="task-dots-row" title="●已接通 ●已拨打 ○待拨打">${statusDots}</div>
         <div class="task-progress">
           <div class="task-progress-bar"><div class="task-progress-fill" style="width:${prog}%"></div></div>
-          <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${task.completed} / ${task.total} (${prog}%)</div>
+          <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${called} / ${task.total} (${prog}%)</div>
         </div>
         <div class="task-actions">
-          ${task.status === 'pending' ? `<button onclick="startTask('${task.id}')">▶️ 开始</button>` : ''}
-          ${task.status === 'running' && task.mode === 'manual' ? `<button onclick="showNextCallBtn()">✅ 下一个</button>` : ''}
-          ${task.status === 'running' ? `<button onclick="pauseTask('${task.id}')">⏸️ 暂停</button>` : ''}
-          ${task.status === 'paused' ? `<button onclick="resumeTask('${task.id}')">▶️ 继续</button>` : ''}
-          <button onclick="deleteTask('${task.id}')">🗑️ 删除</button>
+          <button class="btn-detail" onclick="openTaskDetail('${task.id}')">📋 详情</button>
+          ${task.status === 'pending' ? `<button class="btn-start" onclick="startTask('${task.id}')">▶️ 开始</button>` : ''}
+          ${task.status === 'running' && task.mode === 'manual' ? `<button class="btn-next" onclick="showNextCallBtn()">✅ 下一个</button>` : ''}
+          ${task.status === 'running' ? `<button class="btn-pause" onclick="pauseTask('${task.id}')">⏸️ 暂停</button>` : ''}
+          ${task.status === 'paused' ? `<button class="btn-resume" onclick="resumeTask('${task.id}')">▶️ 继续</button>` : ''}
+          <button class="btn-delete" onclick="deleteTask('${task.id}')">🗑️</button>
         </div>
       </div>`;
   }).join('');
@@ -564,7 +586,7 @@ function saveTask(e) {
   const orderMode = document.getElementById('taskOrderMode').value;
   if (!name) { showToast('请输入任务名称', 'error'); return; }
   if (!state.selectedContacts.length) { showToast('请选择至少一个联系人', 'error'); return; }
-  let contacts = [...state.selectedContacts];
+  let contacts = [...state.selectedContacts].map(c => ({ ...c, dialStatus: 'pending', dialedAt: null }));
   if (orderMode === 'random') contacts = contacts.sort(() => Math.random() - 0.5);
   const task = {
     name, contacts, interval, retry, mode,
@@ -593,18 +615,35 @@ function startTask(id) {
 function executeCurrentTask() {
   const task = state.currentTask;
   if (!task || task.status !== 'running') return;
-  if (task.currentIndex >= task.total) { finishTask(task); return; }
-  const c = task.contacts[task.currentIndex];
-  updateFloatingPanel(task.currentIndex, task.total, c?.name || c?.phone || '-');
+
+  // 跳过已拨打的，找到下一个待拨打的
+  let nextIdx = -1;
+  for (let i = task.currentIndex; i < task.contacts.length; i++) {
+    if (task.contacts[i].dialStatus === 'pending') { nextIdx = i; break; }
+  }
+  if (nextIdx === -1) { finishTask(task); return; }
+
+  task.currentIndex = nextIdx;
+  const c = task.contacts[nextIdx];
+  updateFloatingPanel(nextIdx + 1, task.total, c?.name || c?.phone || '-');
+
   // 拨打电话
   if (c) doDial(c.name || c.phone, c.phone, c.id);
+
+  // 更新该号码状态为"已拨打"
+  task.contacts[nextIdx].dialStatus = 'called';
+  task.contacts[nextIdx].dialedAt = new Date().toISOString();
+
   // 记录
   const rec = { contactId: c?.id, name: c?.name || c.phone, phone: c?.phone, status: 'dialed', duration: 0, taskId: task.id, dialedAt: new Date().toISOString() };
   DB.add(DB.history, rec);
   state.history = DB.get(DB.history);
   task.history.push(rec);
-  task.currentIndex++;
-  DB.update(DB.tasks, task.id, { currentIndex: task.currentIndex, completed: task.completed + 1 });
+
+  DB.update(DB.tasks, task.id, { contacts: task.contacts, currentIndex: task.currentIndex });
+  state.tasks = DB.get(DB.tasks);
+  renderTasks();
+
   // 自动模式：定时拨打下一个；手动模式：等待用户点击
   if (task.mode === 'auto') {
     clearTimeout(state.taskTimer);
@@ -682,6 +721,102 @@ function updateFloatingPanel(cur, total, name) {
   document.getElementById('progressText').textContent = `${cur} / ${total}`;
   document.getElementById('progressFill').style.width = prog + '%';
   document.getElementById('floatingCurrent').textContent = `正在拨打：${name}`;
+}
+
+// ========== 任务详情 ==========
+let currentDetailTask = null;
+
+function openTaskDetail(id) {
+  const task = state.tasks.find(t => t.id == id);
+  if (!task) return;
+  currentDetailTask = task;
+  document.getElementById('taskDetailTitle').textContent = task.name;
+  renderTaskDetailList(task);
+  openModal('taskDetailModal');
+}
+
+function renderTaskDetailList(task) {
+  const c = document.getElementById('taskDetailList');
+  if (!task.contacts.length) {
+    c.innerHTML = '<div style="text-align:center;padding:40px;color:#8E8E93;">暂无号码</div>';
+    return;
+  }
+  c.innerHTML = task.contacts.map((x, i) => {
+    const statusMap = {
+      pending: { icon: '○', label: '待拨打', cls: 'pending' },
+      called: { icon: '📞', label: '已拨打', cls: 'warning' },
+      connected: { icon: '✅', label: '已接通', cls: 'success' },
+      not_answering: { icon: '❌', label: '未接通', cls: 'danger' }
+    };
+    const st = statusMap[x.dialStatus] || statusMap.pending;
+    const timeStr = x.dialedAt ? new Date(x.dialedAt).toLocaleString('zh-CN') : '-';
+    const canRedial = x.dialStatus !== 'pending';
+    return `<div class="detail-item" data-idx="${i}">
+      <div class="detail-icon ${st.cls}">${st.icon}</div>
+      <div class="detail-info">
+        <div class="detail-name">${x.name || x.phone}</div>
+        <div class="detail-phone">${x.phone}</div>
+        <div class="detail-time">${timeStr}</div>
+      </div>
+      <div class="detail-right">
+        <span class="detail-badge ${st.cls}">${st.label}</span>
+        <button class="btn-redial-sm" onclick="reDialContact('${task.id}', ${i})" title="重新拨打">🔄</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function handleTaskDetailAction(e) {
+  // handled by inline onclick
+}
+
+function reDialContact(taskId, idx) {
+  const task = state.tasks.find(t => t.id == taskId);
+  if (!task) return;
+  task.contacts[idx].dialStatus = 'pending';
+  task.contacts[idx].dialedAt = null;
+  DB.update(DB.tasks, task.id, { contacts: task.contacts });
+  state.tasks = DB.get(DB.tasks);
+  renderTaskDetailList(task);
+  renderTasks();
+  showToast('已重置为待拨打状态', 'success');
+}
+
+function resetTaskDetailStatus() {
+  if (!currentDetailTask) return;
+  currentDetailTask.contacts.forEach(c => { c.dialStatus = 'pending'; c.dialedAt = null; });
+  DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts });
+  state.tasks = DB.get(DB.tasks);
+  renderTaskDetailList(currentDetailTask);
+  renderTasks();
+  showToast('所有号码已重置为待拨打', 'success');
+}
+
+function reAddFailedContacts() {
+  if (!currentDetailTask) return;
+  let count = 0;
+  currentDetailTask.contacts.forEach(c => {
+    if (c.dialStatus === 'called' || c.dialStatus === 'not_answering') {
+      c.dialStatus = 'pending'; c.dialedAt = null; count++;
+    }
+  });
+  DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts });
+  state.tasks = DB.get(DB.tasks);
+  renderTaskDetailList(currentDetailTask);
+  renderTasks();
+  showToast(`已将 ${count} 个未接号码重置为待拨打`, 'success');
+}
+
+function reAddAllContacts() {
+  if (!currentDetailTask) return;
+  currentDetailTask.contacts.forEach(c => { c.dialStatus = 'pending'; c.dialedAt = null; });
+  currentDetailTask.status = 'pending';
+  DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts, status: 'pending' });
+  state.tasks = DB.get(DB.tasks);
+  renderTaskDetailList(currentDetailTask);
+  renderTasks();
+  closeModal('taskDetailModal');
+  showToast('任务已全部重置，可重新开始', 'success');
 }
 
 // ========== 通话记录 ==========
