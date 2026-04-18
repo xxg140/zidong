@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AutoDialer - 智能自动拨号系统</title>
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
   <header class="app-header">
@@ -72,7 +72,7 @@
         <div class="page-header">
           <h2>自动拨号任务</h2>
           <div class="header-actions">
-            <button class="btn btn-secondary" id="importTaskBtn">📥 导入任务</button>
+            <button class="btn btn-primary" id="addTaskBtn">+ 手动添加</button>
           </div>
         </div>
         <div class="task-overview">
@@ -147,6 +147,43 @@
     </div>
   </div>
 
+  <!-- 手动添加号码弹窗 -->
+  <div class="modal" id="manualAddModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>手动添加号码</h3>
+        <button class="modal-close" data-modal="manualAddModal">×</button>
+      </div>
+      <div style="padding:16px 20px;">
+        <div style="font-size:13px;color:#8E8E93;margin-bottom:12px;">每行一个号码，格式：姓名,电话 或直接电话号码</div>
+        <textarea id="manualAddInput" rows="8" placeholder="张三,13800138001&#10;李四,13900139002&#10;13700137003" style="width:100%;padding:12px;border:1px solid var(--light-gray);border-radius:var(--radius);font-size:14px;resize:vertical;font-family:monospace;background:var(--bg-color);"></textarea>
+      </div>
+      <div style="padding:0 20px 20px;">
+        <div class="form-group">
+          <label>任务名称 <span class="required">*</span></label>
+          <input type="text" id="manualTaskName" placeholder="例如：2026年4月营销外呼">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>拨号间隔（秒）</label>
+            <input type="number" id="manualTaskInterval" value="30" min="5" max="300">
+          </div>
+          <div class="form-group">
+            <label>拨号模式</label>
+            <select id="manualTaskMode">
+              <option value="auto">自动模式</option>
+              <option value="manual" selected>手动确认模式</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" data-modal="manualAddModal">取消</button>
+        <button class="btn btn-primary" id="confirmManualAddBtn">创建任务</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 导入模态框 -->
   <div class="modal" id="importModal">
     <div class="modal-content">
@@ -217,7 +254,7 @@
         </div>
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" data-modal="importModal">取消</button>
-          <button class="btn btn-primary" id="confirmImportTaskBtn">创建任务并开始</button>
+          <button class="btn btn-primary" id="confirmImportTaskBtn">创建任务</button>
         </div>
       </div>
     </div>
@@ -360,6 +397,6 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>
