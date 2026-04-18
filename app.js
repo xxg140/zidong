@@ -87,7 +87,9 @@ function setupEventListeners() {
   document.getElementById('filterGroup').addEventListener('change', renderContacts);
   // 导入
   document.getElementById('importContactsBtn').addEventListener('click', openImportModal);
-  document.getElementById('importTaskBtn').addEventListener('click', () => openImportModal('task'));
+  document.getElementById('addTaskBtn').addEventListener('click', () => openModal('manualAddModal'));
+  document.getElementById('confirmManualAddBtn').addEventListener('click', confirmManualAdd);
+  document.getElementById('importTaskBtn')?.addEventListener('click', () => openImportModal('task'));
   document.getElementById('downloadTemplateBtn').addEventListener('click', downloadTemplate);
   document.getElementById('importFileInput').addEventListener('change', handleFileImport);
   document.getElementById('tabContacts').addEventListener('click', () => setImportTab('contacts'));
@@ -445,6 +447,45 @@ function confirmImportContacts() {
   showToast(`已导入 ${contacts.length} 个联系人`, 'success');
 }
 
+function confirmManualAdd() {
+  const raw = document.getElementById('manualAddInput').value.trim();
+  const taskName = document.getElementById('manualTaskName').value.trim();
+  const interval = parseInt(document.getElementById('manualTaskInterval').value) || 30;
+  const mode = document.getElementById('manualTaskMode').value;
+  if (!taskName) { showToast('请输入任务名称', 'error'); return; }
+  if (!raw) { showToast('请输入至少一个号码', 'error'); return; }
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const contacts = [];
+  for (const line of lines) {
+    const parts = line.split(/[,，\t]+/).map(s => s.trim());
+    const phone = (parts.length > 1 ? parts[1] : parts[0]).replace(/[^\d+\-]/g, '');
+    const name = parts.length > 1 ? parts[0] : '';
+    if (phone && /[\d]{5,}/.test(phone)) {
+      contacts.push({ name, phone, dialStatus: 'pending', dialedAt: null });
+    }
+  }
+  if (!contacts.length) { showToast('未识别到有效号码', 'error'); return; }
+  const task = {
+    name: taskName,
+    contacts,
+    interval,
+    mode,
+    status: 'pending',
+    total: contacts.length,
+    completed: 0,
+    failed: 0,
+    currentIndex: 0,
+    history: []
+  };
+  DB.add(DB.tasks, task);
+  state.tasks = DB.get(DB.tasks);
+  closeModal('manualAddModal');
+  document.getElementById('manualAddInput').value = '';
+  document.getElementById('manualTaskName').value = '';
+  renderTasks();
+  showToast(`任务「${taskName}」已创建 (${contacts.length}个号码)`, 'success');
+}
+
 function confirmImportTask() {
   const taskName = document.getElementById('importTaskName').value.trim();
   const contacts = document.getElementById('importTaskDedup').checked ? dedupContacts(state.importContacts) : state.importContacts;
@@ -469,8 +510,6 @@ function confirmImportTask() {
   closeModal('importModal');
   renderTasks();
   showToast(`任务「${taskName}」已创建 (${contacts.length}个号码)`, 'success');
-  // 自动开始
-  startTask(task.id);
 }
 
 // ========== 导出 ==========
@@ -501,7 +540,7 @@ function renderTasks() {
   document.getElementById('runningTasks').textContent = state.tasks.filter(t => t.status === 'running').length;
   const c = document.getElementById('taskList');
   if (!state.tasks.length) {
-    c.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>暂无拨号任务</p><p style="font-size:13px;color:#8E8E93;">点击上方「导入任务」按钮，从文件创建</p></div>';
+    c.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>暂无拨号任务</p><p style="font-size:13px;color:#8E8E93;">点击上方「手动添加」按钮创建任务</p></div>';
     return;
   }
   c.innerHTML = state.tasks.map(task => {
