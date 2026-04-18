@@ -23,7 +23,7 @@ const DB = {
 
 // ========== 全局状态 ==========
 let state = {
-  currentTab: 'contacts',
+  currentTab: 'tasks',
   contacts: [],
   tasks: [],
   history: [],
@@ -101,8 +101,7 @@ function setupEventListeners() {
   document.querySelectorAll('.dial-btn').forEach(btn => btn.addEventListener('click', () => appendDigit(btn.dataset.digit)));
   document.getElementById('dialClear').addEventListener('click', () => { document.getElementById('dialNumber').value = ''; });
   document.getElementById('makeCallBtn').addEventListener('click', dialNow);
-  // 任务
-  document.getElementById('createTaskBtn').addEventListener('click', () => { resetTaskForm(); openModal('taskModal'); });
+  // 任务（createTaskBtn已移除，不需要监听）
   document.getElementById('taskList').addEventListener('click', handleTaskAction);
   document.getElementById('taskDetailList').addEventListener('click', handleTaskDetailAction);
   document.getElementById('selectContactsBtn').addEventListener('click', openContactPicker);
@@ -110,10 +109,17 @@ function setupEventListeners() {
   document.getElementById('pickerSearch').addEventListener('input', renderPickerContacts);
   document.getElementById('taskForm').addEventListener('submit', saveTask);
   document.getElementById('taskMode').addEventListener('change', updateModeHint);
+  // 任务详情 tab 切换
+  document.querySelectorAll('.detail-tab').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    if (currentDetailTask) renderTaskDetailList(currentDetailTask, btn.dataset.detailTab);
+  }));
   document.getElementById('closeTaskDetailBtn').addEventListener('click', () => closeModal('taskDetailModal'));
-  document.getElementById('resetTaskStatusBtn').addEventListener('click', resetTaskDetailStatus);
   document.getElementById('reAddFailedBtn').addEventListener('click', reAddFailedContacts);
   document.getElementById('reAddAllBtn').addEventListener('click', reAddAllContacts);
+  document.getElementById('createFailedTaskBtn').addEventListener('click', createFailedTask);
+  // 移除 resetTaskStatusBtn（已删除）
   // 通话记录
   document.getElementById('filterHistoryBtn').addEventListener('click', renderHistory);
   document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
@@ -744,23 +750,50 @@ function deleteTask(id) {
 
 // ========== 任务详情 ==========
 let currentDetailTask = null;
+let currentDetailTab = 'pending';
 
 function openTaskDetail(id) {
   const task = state.tasks.find(t => t.id == id);
   if (!task) return;
   currentDetailTask = task;
+  currentDetailTab = 'pending';
   document.getElementById('taskDetailTitle').textContent = task.name;
-  renderTaskDetailList(task);
+  // 重置tab激活状态
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.detail-tab[data-detail-tab="pending"]').classList.add('active');
+  updateDetailCounts(task);
+  renderTaskDetailList(task, 'pending');
   openModal('taskDetailModal');
 }
 
-function renderTaskDetailList(task) {
+function updateDetailCounts(task) {
+  const pending = task.contacts.filter(x => x.dialStatus === 'pending').length;
+  const called = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering').length;
+  const connected = task.contacts.filter(x => x.dialStatus === 'connected').length;
+  document.getElementById('detailPendingCount').textContent = pending;
+  document.getElementById('detailCalledCount').textContent = called;
+  document.getElementById('detailConnectedCount').textContent = connected;
+}
+
+function renderTaskDetailList(task, tab) {
+  currentDetailTab = tab || 'pending';
+  updateDetailCounts(task);
   const c = document.getElementById('taskDetailList');
-  if (!task.contacts.length) {
-    c.innerHTML = '<div style="text-align:center;padding:40px;color:#8E8E93;">暂无号码</div>';
+  let filtered = [];
+  if (tab === 'pending') {
+    filtered = task.contacts.filter(x => x.dialStatus === 'pending');
+  } else if (tab === 'called') {
+    filtered = task.contacts.filter(x => x.dialStatus === 'called' || x.dialStatus === 'not_answering');
+  } else if (tab === 'connected') {
+    filtered = task.contacts.filter(x => x.dialStatus === 'connected');
+  }
+  if (!filtered.length) {
+    const msgs = { pending: '没有待拨打的号码', called: '没有已拨打未接通的号码', connected: '没有已接通的号码' };
+    c.innerHTML = `<div style="text-align:center;padding:40px;color:#8E8E93;"><div style="font-size:40px;margin-bottom:12px;">📭</div><p>${msgs[tab]}</p></div>`;
     return;
   }
-  c.innerHTML = task.contacts.map((x, i) => {
+  c.innerHTML = filtered.map(x => {
+    const origIdx = task.contacts.indexOf(x);
     const statusMap = {
       pending: { icon: '○', label: '待拨打', cls: 'pending' },
       called: { icon: '📞', label: '已拨打', cls: 'warning' },
@@ -769,18 +802,18 @@ function renderTaskDetailList(task) {
     };
     const st = statusMap[x.dialStatus] || statusMap.pending;
     const timeStr = x.dialedAt ? new Date(x.dialedAt).toLocaleString('zh-CN') : '-';
-    return `<div class="detail-item" data-idx="${i}">
+    return `<div class="detail-item">
       <div class="detail-icon ${st.cls}">${st.icon}</div>
       <div class="detail-info">
         <div class="detail-name">${x.name || x.phone}</div>
         <div class="detail-phone">${x.phone}</div>
+        ${x.note ? `<div class="detail-note">${x.note}</div>` : ''}
         <div class="detail-time">${timeStr}</div>
-        ${x.note ? `<div class="detail-note">📝 ${x.note}</div>` : ''}
       </div>
       <div class="detail-right">
         <span class="detail-badge ${st.cls}">${st.label}</span>
-        <button class="btn-dial-sm" onclick="dialFromDetail('${task.id}', ${i})" title="手动拨打">📞</button>
-        <button class="btn-redial-sm" onclick="reDialContact('${task.id}', ${i})" title="重置并重新拨打">🔄</button>
+        <button class="btn-dial-sm" onclick="dialFromDetail('${task.id}', ${origIdx})" title="拨打">📞</button>
+        <button class="btn-redial-sm" onclick="reDialContact('${task.id}', ${origIdx})" title="重置">🔄</button>
       </div>
     </div>`;
   }).join('');
@@ -805,19 +838,9 @@ function reDialContact(taskId, idx) {
   task.contacts[idx].dialedAt = null;
   DB.update(DB.tasks, task.id, { contacts: task.contacts });
   state.tasks = DB.get(DB.tasks);
-  renderTaskDetailList(task);
+  renderTaskDetailList(task, currentDetailTab);
   renderTasks();
   showToast('已重置为待拨打状态', 'success');
-}
-
-function resetTaskDetailStatus() {
-  if (!currentDetailTask) return;
-  currentDetailTask.contacts.forEach(c => { c.dialStatus = 'pending'; c.dialedAt = null; });
-  DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts });
-  state.tasks = DB.get(DB.tasks);
-  renderTaskDetailList(currentDetailTask);
-  renderTasks();
-  showToast('所有号码已重置为待拨打', 'success');
 }
 
 function reAddFailedContacts() {
@@ -830,9 +853,34 @@ function reAddFailedContacts() {
   });
   DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts });
   state.tasks = DB.get(DB.tasks);
-  renderTaskDetailList(currentDetailTask);
+  renderTaskDetailList(currentDetailTask, currentDetailTab);
   renderTasks();
   showToast(`已将 ${count} 个未接号码重置为待拨打`, 'success');
+}
+
+function createFailedTask() {
+  if (!currentDetailTask) return;
+  const failed = currentDetailTask.contacts.filter(c => c.dialStatus === 'called' || c.dialStatus === 'not_answering');
+  if (!failed.length) { showToast('没有未接通的号码', 'warning'); return; }
+  const newContacts = failed.map(c => ({ ...c, dialStatus: 'pending', dialedAt: null }));
+  const taskName = `${currentDetailTask.name} - 未接通重拨`;
+  const task = {
+    name: taskName,
+    contacts: newContacts,
+    interval: currentDetailTask.interval || 30,
+    mode: currentDetailTask.mode || 'manual',
+    status: 'pending',
+    total: newContacts.length,
+    completed: 0,
+    failed: 0,
+    currentIndex: 0,
+    history: []
+  };
+  DB.add(DB.tasks, task);
+  state.tasks = DB.get(DB.tasks);
+  renderTasks();
+  closeModal('taskDetailModal');
+  showToast(`新任务「${taskName}」已创建 (${newContacts.length}个未接号码)`, 'success');
 }
 
 function reAddAllContacts() {
@@ -841,9 +889,11 @@ function reAddAllContacts() {
   currentDetailTask.status = 'pending';
   DB.update(DB.tasks, currentDetailTask.id, { contacts: currentDetailTask.contacts, status: 'pending' });
   state.tasks = DB.get(DB.tasks);
-  renderTaskDetailList(currentDetailTask);
+  renderTaskDetailList(currentDetailTask, 'pending');
+  // 重置tab到pending
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.detail-tab[data-detail-tab="pending"]').classList.add('active');
   renderTasks();
-  closeModal('taskDetailModal');
   showToast('任务已全部重置，可重新开始', 'success');
 }
 
