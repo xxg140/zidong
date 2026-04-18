@@ -212,6 +212,15 @@ body {
   background: #D92D20;
 }
 
+.btn-warning {
+  background: #FF9500;
+  color: white;
+}
+
+.btn-warning:hover {
+  background: #E68600;
+}
+
 .btn-call {
   background: var(--success);
   color: white;
