@@ -596,9 +596,44 @@ body {
 .filter-bar {
   display: flex;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.history-date-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.history-date-tabs::-webkit-scrollbar { display: none; }
+
+.date-tab {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--light-gray);
+  background: transparent;
+  font-size: 13px;
+  color: #3C3C43;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.date-tab.active {
+  background: #007AFF;
+  color: white;
+  border-color: #007AFF;
+}
+
+.date-tab-custom {
+  border-style: dashed;
+  color: #007AFF;
 }
 
 .history-list {
