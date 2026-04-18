@@ -1,1301 +1,470 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iOS自动拨号</title>
-    <style>
-        :root {
-            --primary: #007AFF;
-            --secondary: #5856D6;
-            --success: #34C759;
-            --warning: #FF9500;
-            --danger: #FF3B30;
-            --light-bg: #f9f9f9;
-            --dark-text: #333;
-            --light-text: #666;
-            --border-color: #ddd;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-            color: var(--dark-text);
-        }
-        .container {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        h1 {
-            text-align: center;
-            color: var(--dark-text);
-            margin-bottom: 25px;
-            font-weight: 600;
-        }
-        .section {
-            margin-bottom: 25px;
-            padding: 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background-color: white;
-        }
-        .section-title {
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: var(--dark-text);
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--light-text);
-        }
-        input[type="file"], input[type="tel"], input[type="number"], select, input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        textarea {
-            width: 100%;
-            height: 120px;
-            padding: 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: monospace;
-            resize: vertical;
-            box-sizing: border-box;
-        }
-        button {
-            padding: 12px 16px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-weight: 500;
-        }
-        button:hover:not(:disabled) {
-            opacity: 0.9;
-        }
-        button:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-        .btn-secondary {
-            background: var(--secondary);
-            color: white;
-        }
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-        .btn-warning {
-            background: var(--warning);
-            color: white;
-        }
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-        .btn-block {
-            width: 100%;
-            padding: 15px;
-            font-size: 18px;
-        }
-        .status {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            display: none;
-        }
-        .success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        .warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        .contact-list {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 10px;
-            background-color: var(--light-bg);
-        }
-        .contact-item {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            border-radius: 6px;
-            margin-bottom: 5px;
-        }
-        .contact-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-        .status-indicator {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .status-pending {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-        .status-called {
-            background: #e8f5e9;
-            color: #388e3c;
-        }
-        .status-failed {
-            background: #ffebee;
-            color: #d32f2f;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: #eee;
-            border-radius: 3px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        .progress-fill {
-            height: 100%;
-            background: var(--primary);
-            transition: width 0.3s ease;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin: 15px 0;
-            font-size: 14px;
-        }
-        .stat-card {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            border: 1px solid #e9ecef;
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary);
-        }
-        .stat-label {
-            font-size: 12px;
-            color: var(--light-text);
-            margin-top: 5px;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        .action-buttons button {
-            flex: 1;
-            min-width: 100px;
-        }
-        .timer-display {
-            font-size: 16px;
-            text-align: center;
-            margin: 15px 0;
-            color: var(--light-text);
-            font-weight: 500;
-        }
-        .task-card {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .task-name {
-            font-weight: bold;
-            font-size: 18px;
-            color: var(--dark-text);
-        }
-        .task-stats {
-            font-size: 12px;
-            color: var(--light-text);
-        }
-        .task-controls {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-        .task-controls button {
-            flex: 1;
-            min-width: 80px;
-            padding: 10px;
-            font-size: 14px;
-        }
-        .contact-actions {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-        .contact-actions button {
-            padding: 4px 8px;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-        .import-section {
-            background: #e8f4fd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 10px;
-            display: none;
-        }
-        .import-section.active {
-            display: block;
-        }
-        .settings-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-        .settings-row label {
-            width: 120px;
-            margin-bottom: 0;
-        }
-        .settings-row input, .settings-row select {
-            width: 100%;
-        }
-        .dialing-status {
-            font-size: 14px;
-            color: var(--light-text);
-            text-align: center;
-            margin-top: 5px;
-            padding: 5px 0;
-        }
-        .tag {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-left: 5px;
-        }
-        .tag-default {
-            background: #e0e0e0;
-            color: #666;
-        }
-        .tag-wechat {
-            background: #4CAF50;
-            color: white;
-        }
-        .tag-unpassed {
-            background: #FF9800;
-            color: white;
-        }
-        .tag-no {
-            background: #F44336;
-            color: white;
-        }
-        .summary-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-        .summary-title {
-            font-size: 20px;
-            margin-bottom: 15px;
-        }
-        .summary-stats {
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .summary-stat {
-            display: flex;
-            flex-direction: column;
-        }
-        .summary-value {
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .summary-label {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .contact-info {
-            flex: 1;
-        }
-        .contact-number {
-            font-weight: bold;
-            font-size: 16px;
-        }
-        .contact-name {
-            font-size: 14px;
-            color: var(--light-text);
-        }
-        .contact-tag {
-            margin-top: 5px;
-        }
-        .countdown-timer {
-            font-size: 14px;
-            color: var(--primary);
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .hangup-confirm-btn {
-            background: #FFA726;
-            color: white;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AutoDialer - 智能自动拨号系统</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>📞 批量自动拨号管理系统 - 挂断确认版</h1>
-        
-        <!-- 今日统计汇总 -->
-        <div class="summary-section">
-            <div class="summary-title">📊 今日统计数据</div>
-            <div class="summary-stats">
-                <div class="summary-stat">
-                    <div class="summary-value" id="todayTotalCalls">0</div>
-                    <div class="summary-label">今日拨打量</div>
-                </div>
-                <div class="summary-stat">
-                    <div class="summary-value" id="todayConnectedCalls">0</div>
-                    <div class="summary-label">今日接通量</div>
-                </div>
-                <div class="summary-stat">
-                    <div class="summary-value" id="todaySuccessRate">0%</div>
-                    <div class="summary-label">接通率</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 创建新任务区域 -->
-        <div class="section">
-            <div class="section-title">📁 创建新任务</div>
-            <div class="input-group">
-                <label for="newTaskName">任务名称:</label>
-                <input type="text" id="newTaskName" placeholder="例如：客户回访">
-            </div>
-            <div class="settings-row">
-                <label for="defaultInterval">默认间隔时间 (秒):</label>
-                <input type="number" id="defaultInterval" value="30" min="5" max="300" step="5">
-            </div>
-            <button id="createTaskBtn" class="btn-primary btn-block">创建任务</button>
-            <a href="#" class="template-link" id="downloadTemplate">下载导入模板 (CSV)</a>
-        </div>
-
-        <!-- 任务列表展示 -->
-        <div class="section">
-            <div class="section-title">📋 我的任务</div>
-            <div id="taskList">
-                <!-- 任务卡片将由JS动态生成 -->
-                <p id="noTasksMessage" style="text-align: center; color: #999;">还没有创建任何任务，请先创建一个。</p>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-title">ℹ️ 使用说明</div>
-            <ul style="text-align: left; font-size: 14px;">
-                <li>此工具仅用于合法用途，如联系家人朋友</li>
-                <li>请勿用于骚扰或恶意拨打</li>
-                <li>注意遵守运营商通话政策</li>
-                <li>建议设置较长间隔时间，避免被识别为异常行为</li>
-                <li>CSV文件格式: 每行一个号码，支持带姓名 (姓名,号码)</li>
-                <li>可为每个号码添加标签，便于后续跟进</li>
-                <li>拨打统计信息按天记录，方便追踪进度</li>
-                <li><strong>重要:</strong> 每次拨打后，系统会等待您点击“挂断确认”，然后开始倒计时，倒计时结束后自动拨打下一个。</li>
-            </ul>
-        </div>
-
-        <div class="status" id="statusMessage"></div>
+  <!-- 顶部导航 -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="logo">📞</span>
+      <h1>AutoDialer</h1>
     </div>
+    <div class="header-right">
+      <button id="settingsBtn" class="icon-btn" title="设置">⚙️</button>
+    </div>
+  </header>
 
-    <script>
-        // --- 核心数据结构 ---
-        let tasks = JSON.parse(localStorage.getItem('dialerTasks')) || [];
-        let callStats = JSON.parse(localStorage.getItem('callStats')) || {};
-        let defaultInterval = parseInt(localStorage.getItem('defaultInterval')) || 30;
-        let activeTimers = {}; // 存储所有活动定时器
-        let countdownTimers = {}; // 存储倒计时定时器
-        let hangupConfirmationTimers = {}; // 存储挂断确认超时定时器
+  <!-- 主内容区 -->
+  <main class="main-content">
+    <!-- 左侧边栏：标签切换 -->
+    <nav class="sidebar">
+      <button class="nav-item active" data-tab="contacts">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">联系人</span>
+      </button>
+      <button class="nav-item" data-tab="dialpad">
+        <span class="nav-icon">🔢</span>
+        <span class="nav-label">拨号盘</span>
+      </button>
+      <button class="nav-item" data-tab="tasks">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">任务</span>
+      </button>
+      <button class="nav-item" data-tab="history">
+        <span class="nav-icon">📜</span>
+        <span class="nav-label">记录</span>
+      </button>
+      <button class="nav-item" data-tab="stats">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">统计</span>
+      </button>
+    </nav>
 
-        // --- DOM 元素 ---
-        const newTaskNameEl = document.getElementById('newTaskName');
-        const defaultIntervalEl = document.getElementById('defaultInterval');
-        const taskListEl = document.getElementById('taskList');
-        const noTasksMessage = document.getElementById('noTasksMessage');
-        const downloadTemplateLink = document.getElementById('downloadTemplate');
-        const createTaskBtn = document.getElementById('createTaskBtn');
-        const statusMessageEl = document.getElementById('statusMessage');
-        const todayTotalCallsEl = document.getElementById('todayTotalCalls');
-        const todayConnectedCallsEl = document.getElementById('todayConnectedCalls');
-        const todaySuccessRateEl = document.getElementById('todaySuccessRate');
-
-        // --- 工具函数 ---
-        function parseCSV(csvText) {
-            const lines = csvText.split('\n');
-            const numbers = [];
-            const seenNumbers = new Set(); // 用于去重
-            
-            lines.forEach(line => {
-                line = line.trim();
-                if (!line) return;
-                
-                if (line.includes(',')) {
-                    const parts = line.split(',');
-                    if (parts.length >= 2) {
-                        const name = parts[0].trim();
-                        // 提取号码部分并过滤非数字字符
-                        const rawNumber = parts[1].trim();
-                        const number = extractPhoneNumber(rawNumber);
-                        
-                        if (number && !seenNumbers.has(number)) {
-                            seenNumbers.add(number);
-                            numbers.push({ 
-                                name, 
-                                number, 
-                                status: 'pending', 
-                                retryCount: 0, 
-                                lastCallTime: null,
-                                tag: 'default'
-                            });
-                        }
-                    }
-                } else {
-                    // 直接处理纯号码行
-                    const number = extractPhoneNumber(line);
-                    if (number && !seenNumbers.has(number)) {
-                        seenNumbers.add(number);
-                        numbers.push({ 
-                            number, 
-                            status: 'pending', 
-                            retryCount: 0, 
-                            lastCallTime: null,
-                            tag: 'default'
-                        });
-                    }
-                }
-            });
-            
-            return numbers;
-        }
-
-        // 从字符串中提取手机号码
-        function extractPhoneNumber(str) {
-            // 匹配手机号模式 (1开头的11位数字) 或 固定电话模式 (\d-\d 或 \d\d-\d)
-            const phoneRegex = /1[3-9]\d{9}|(?:\d{3,4}-?)?\d{7,8}/;
-            const match = str.match(phoneRegex);
-            if (match) {
-                // 清理号码，移除非数字字符
-                let cleaned = match[0].replace(/[^\d-+]/g, '');
-                // 确保是有效长度的号码
-                if (cleaned.length >= 7 && cleaned.length <= 15) {
-                    return cleaned;
-                }
-            }
-            return null; // 不是有效号码则返回null
-        }
-
-        function downloadCSVTemplate() {
-            const csvContent = "姓名,号码\n张三,13800138001\n李四,13900139002\n王五,010-12345678";
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = '拨号任务导入模板.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function saveTasksToStorage() {
-            localStorage.setItem('dialerTasks', JSON.stringify(tasks));
-        }
-
-        function saveCallStatsToStorage() {
-            localStorage.setItem('callStats', JSON.stringify(callStats));
-        }
-
-        function saveDefaultInterval() {
-            localStorage.setItem('defaultInterval', defaultInterval.toString());
-        }
-
-        function generateTaskId() {
-            return Date.now().toString() + Math.random().toString(36).substr(2, 5);
-        }
-
-        // 获取今天的日期字符串 (YYYY-MM-DD)
-        function getTodayStr() {
-            const today = new Date();
-            return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        }
-
-        // 更新今日统计
-        function updateTodayStats() {
-            const todayStr = getTodayStr();
-            const stats = callStats[todayStr] || { total: 0, connected: 0 };
-            
-            todayTotalCallsEl.textContent = stats.total;
-            todayConnectedCallsEl.textContent = stats.connected;
-            const rate = stats.total > 0 ? ((stats.connected / stats.total) * 100).toFixed(1) : 0;
-            todaySuccessRateEl.textContent = `${rate}%`;
-        }
-
-        // 记录一次拨打
-        function logCall(status = 'called') {
-            const todayStr = getTodayStr();
-            if (!callStats[todayStr]) {
-                callStats[todayStr] = { total: 0, connected: 0 };
-            }
-            
-            callStats[todayStr].total += 1;
-            if (status === 'connected') {
-                callStats[todayStr].connected += 1;
-            }
-            
-            saveCallStatsToStorage();
-            updateTodayStats();
-        }
-
-        // --- 核心业务逻辑 ---
-        function createNewTask() {
-            const name = newTaskNameEl.value.trim() || `任务 ${tasks.length + 1}`;
-            const interval = parseInt(defaultIntervalEl.value) || defaultInterval;
-            
-            const newTask = {
-                id: generateTaskId(),
-                name: name,
-                contacts: [],
-                isActive: false,
-                isPaused: false,
-                currentDialIndex: 0,
-                interval: interval,
-                isWaitingHangup: false // 新增状态：是否在等待挂断
-            };
-
-            tasks.push(newTask);
-            saveTasksToStorage();
-            renderTaskList();
-
-            newTaskNameEl.value = '';
-            showStatus(`成功创建任务: ${name}`, 'info');
-        }
-
-        function importToTask(taskId) {
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = '.csv, .txt';
-
-            fileInput.onchange = event => {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const csvText = e.target.result;
-                    const parsedContacts = parseCSV(csvText); // 自动去重和过滤
-
-                    const taskIndex = tasks.findIndex(t => t.id === taskId);
-                    if (taskIndex === -1) {
-                        showStatus('任务不存在！', 'warning');
-                        return;
-                    }
-
-                    tasks[taskIndex].contacts.push(...parsedContacts);
-                    saveTasksToStorage();
-                    renderTaskList();
-
-                    showStatus(`成功为任务 "${tasks[taskIndex].name}" 导入了 ${parsedContacts.length} 个号码 (已自动去重和过滤)`, 'info');
-                };
-                reader.readAsText(file);
-            };
-            fileInput.click();
-        }
-
-        function appendToTask(taskId) {
-            const numbers = prompt("请输入要追加的号码 (每行一个):");
-            if (!numbers) return;
-
-            const parsedContacts = parseCSV(numbers); // 自动去重和过滤
-
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) {
-                showStatus('任务不存在！', 'warning');
-                return;
-            }
-
-            tasks[taskIndex].contacts.push(...parsedContacts);
-            saveTasksToStorage();
-            renderTaskList();
-
-            showStatus(`成功向任务 "${tasks[taskIndex].name}" 追加了 ${parsedContacts.length} 个号码 (已自动去重和过滤)`, 'info');
-        }
-
-        function renderTaskList() {
-            if (tasks.length === 0) {
-                taskListEl.innerHTML = '<p id="noTasksMessage" style="text-align: center; color: #999;">还没有创建任何任务，请先创建一个。</p>';
-                return;
-            }
-
-            noTasksMessage.style.display = 'none';
-            taskListEl.innerHTML = '';
-
-            tasks.forEach(task => {
-                const total = task.contacts.length;
-                const pending = task.contacts.filter(c => c.status === 'pending').length;
-                const called = task.contacts.filter(c => c.status === 'called').length;
-                const failed = task.contacts.filter(c => c.status === 'failed').length;
-
-                taskCard = document.createElement('div');
-                taskCard.className = 'task-card';
-                taskCard.setAttribute('data-task-id', task.id);
-
-                let dialButtonLabel = '开始拨号';
-                if (task.isActive && !task.isPaused && !task.isWaitingHangup) {
-                    dialButtonLabel = '正在拨号...';
-                } else if (task.isPaused) {
-                    dialButtonLabel = '恢复拨号';
-                } else if (task.isWaitingHangup) {
-                    dialButtonLabel = '等待挂断...'; // 新增状态
-                }
-
-                taskCard.innerHTML = `
-                    <div class="task-header">
-                        <span class="task-name">${task.name}</span>
-                        <span class="task-stats">总计: ${total} | 待拨打: ${pending} | 已拨打: ${called} | 失败: ${failed}</span>
-                    </div>
-                    <div class="settings-row">
-                        <label for="interval-${task.id}">间隔时间 (秒):</label>
-                        <input type="number" id="interval-${task.id}" value="${task.interval}" min="5" max="300" step="5">
-                    </div>
-                    <div class="task-controls">
-                        <button class="btn-primary task-action-btn" data-action="import" data-task-id="${task.id}">导入数据</button>
-                        <button class="btn-secondary task-action-btn" data-action="append" data-task-id="${task.id}">追加号码</button>
-                        <button class="btn-success task-action-btn" data-action="start-dial" data-task-id="${task.id}">${dialButtonLabel}</button>
-                        <button class="btn-warning task-action-btn" data-action="pause-dial" data-task-id="${task.id}" ${!task.isActive || task.isPaused || task.isWaitingHangup ? 'disabled' : ''}>${task.isPaused ? '恢复' : '暂停'}</button>
-                        <button class="btn-danger task-action-btn" data-action="reset" data-task-id="${task.id}">重置任务</button>
-                        <button class="btn-danger task-action-btn" data-action="delete" data-task-id="${task.id}">删除任务</button>
-                    </div>
-                    <div class="dialing-status" id="dialing-status-${task.id}">
-                        ${task.isPaused ? '拨号已暂停' : task.isWaitingHangup ? '等待挂断确认后开始倒计时' : task.isActive ? '正在运行...' : '就绪'}
-                        ${task.countdownTimer && task.countdownSeconds > 0 ? `<span class="countdown-timer">等待 ${task.countdownSeconds}s 后拨打</span>` : ''}
-                    </div>
-                    <div class="contact-list" id="contactList-${task.id}">
-                        ${task.contacts.length === 0 
-                            ? '<div style="text-align: center; color: #999; padding: 20px;">此任务暂无号码数据</div>' 
-                            : task.contacts.map((contact, index) => {
-                                let statusText = '待拨打';
-                                let statusClass = 'status-pending';
-                                
-                                switch(contact.status) {
-                                    case 'called':
-                                        statusText = '已拨打';
-                                        statusClass = 'status-called';
-                                        break;
-                                    case 'failed':
-                                        statusText = '拨打失败';
-                                        statusClass = 'status-failed';
-                                        break;
-                                }
-                                
-                                let actionsHtml = '';
-                                if (contact.status === 'failed') {
-                                    actionsHtml = `
-                                        <div class="contact-actions">
-                                            <button class="btn-warning contact-action-btn" data-action="retry" data-task-id="${task.id}" data-contact-index="${index}">重新加入</button>
-                                            <button class="btn-danger contact-action-btn" data-action="remove" data-task-id="${task.id}" data-contact-index="${index}">移除</button>
-                                            <button class="btn-success contact-action-btn" data-action="dial-manual" data-task-id="${task.id}" data-contact-number="${contact.number}">手动拨打</button>
-                                        </div>
-                                    `;
-                                } else if (contact.status === 'pending') {
-                                     actionsHtml = `
-                                        <div class="contact-actions">
-                                            <button class="btn-success contact-action-btn" data-action="dial-manual" data-task-id="${task.id}" data-contact-number="${contact.number}">手动拨打</button>
-                                        </div>
-                                    `;
-                                }
-                                
-                                let tagHtml = '';
-                                if (contact.tag && contact.tag !== 'default') {
-                                    let tagColor = 'default';
-                                    let tagText = contact.tag;
-                                    switch(contact.tag) {
-                                        case 'wechat':
-                                            tagColor = 'wechat';
-                                            tagText = '加微信';
-                                            break;
-                                        case 'unpassed':
-                                            tagColor = 'unpassed';
-                                            tagText = '微信未通过';
-                                            break;
-                                        case 'no':
-                                            tagColor = 'no';
-                                            tagText = '不需要';
-                                            break;
-                                    }
-                                    tagHtml = `<span class="tag tag-${tagColor}">${tagText}</span>`;
-                                }
-                                
-                                return `
-                                    <div class="contact-item">
-                                        <div class="contact-info">
-                                            <div class="contact-name">${contact.name || '未知'}</div>
-                                            <div class="contact-number">${contact.number}</div>
-                                            <div class="contact-tag">${tagHtml}</div>
-                                        </div>
-                                        <div style="display: flex; align-items: center;">
-                                            <span class="status-indicator ${statusClass}">${statusText}</span>
-                                            ${actionsHtml}
-                                            <select class="tag-select" data-task-id="${task.id}" data-contact-index="${index}">
-                                                <option value="default" ${contact.tag === 'default' ? 'selected' : ''}>无标签</option>
-                                                <option value="wechat" ${contact.tag === 'wechat' ? 'selected' : ''}>加微信</option>
-                                                <option value="unpassed" ${contact.tag === 'unpassed' ? 'selected' : ''}>微信未通过</option>
-                                                <option value="no" ${contact.tag === 'no' ? 'selected' : ''}>不需要</option>
-                                            </select>
-                                            ${task.isWaitingHangup && task.currentDialIndex === index ? 
-                                                `<button class="btn-warning hangup-confirm-btn" data-action="confirm-hangup" data-task-id="${task.id}" data-contact-index="${index}">确认已挂断</button>` : ''}
-                                        </div>
-                                    </div>
-                                `;
-                              }).join('')
-                        }
-                    </div>
-                `;
-                taskListEl.appendChild(taskCard);
-            });
-        }
-
-        // --- 拨号逻辑 (修改) ---
-        function startBatchDialForTask(taskId) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) {
-                showStatus('任务不存在！', 'warning');
-                return;
-            }
-
-            const task = tasks[taskIndex];
-
-            const intervalInput = document.getElementById(`interval-${taskId}`);
-            if (intervalInput) {
-                task.interval = parseInt(intervalInput.value) || defaultInterval;
-            }
-
-            if (task.isPaused) {
-                task.isPaused = false;
-                if (task.currentDialIndex < task.contacts.length) {
-                    showStatus(`恢复任务 "${task.name}" 拨号...`, 'info');
-                    // 如果有剩余的倒计时，继续
-                    if (task.countdownTimer) {
-                        continueCountdown(taskId);
-                    } else if (task.isWaitingHangup) {
-                         // 如果在等待挂断，不执行任何操作
-                    } else {
-                        nextCallInTask(taskId, task.currentDialIndex);
-                    }
-                } else {
-                    showStatus('任务已完成或没有待拨打号码', 'info');
-                }
-                renderTaskList();
-                return;
-            }
-
-            if (task.isActive && !task.isPaused && !task.isWaitingHangup) {
-                showStatus('此任务的拨号已在运行中', 'info');
-                return;
-            }
-
-            const startIndex = task.contacts.findIndex((c, index) => c.status === 'pending' && index >= task.currentDialIndex);
-            if (startIndex === -1) {
-                showStatus('此任务中没有待拨打的号码', 'info');
-                task.isActive = false;
-                task.isPaused = false;
-                task.isWaitingHangup = false;
-                renderTaskList();
-                return;
-            }
-
-            task.isActive = true;
-            task.isPaused = false;
-            task.isWaitingHangup = false; // 确保初始状态为非等待挂断
-            task.currentDialIndex = startIndex;
-            
-            showStatus(`开始为任务 "${task.name}" 批量拨号...`, 'info');
-            nextCallInTask(taskId, startIndex);
-        }
-
-        function pauseBatchDialForTask(taskId) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-
-            const task = tasks[taskIndex];
-            if (!task.isActive) {
-                showStatus('任务未在运行中', 'info');
-                return;
-            }
-
-            task.isPaused = true;
-            task.isActive = false;
-            task.isWaitingHangup = false; // 暂停时也清除等待挂断状态
-
-            if (activeTimers[taskId]) {
-                clearTimeout(activeTimers[taskId]);
-                delete activeTimers[taskId];
-            }
-            
-            // 如果有正在进行的倒计时，也取消
-            if (task.countdownTimer) {
-                 clearInterval(task.countdownTimer);
-                 delete task.countdownTimer;
-                 task.countdownSeconds = 0;
-            }
-            
-            // 如果有挂断确认超时定时器，也取消
-            if (hangupConfirmationTimers[taskId]) {
-                 clearTimeout(hangupConfirmationTimers[taskId]);
-                 delete hangupConfirmationTimers[taskId];
-            }
-
-            saveTasksToStorage();
-            renderTaskList();
-            showStatus(`任务 "${task.name}" 拨号已暂停`, 'info');
-        }
-
-        function nextCallInTask(taskId, currentIndex) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-
-            const task = tasks[taskIndex];
-            if (!task.isActive || task.isPaused) {
-                return;
-            }
-
-            let nextIndex = -1;
-            for (let i = currentIndex; i < task.contacts.length; i++) {
-                if (task.contacts[i].status === 'pending') {
-                    nextIndex = i;
-                    break;
-                }
-            }
-
-            if (nextIndex === -1) {
-                task.isActive = false;
-                task.isPaused = false;
-                task.isWaitingHangup = false;
-                showStatus(`任务 "${task.name}" 拨号完成`, 'info');
-                saveTasksToStorage();
-                renderTaskList();
-                return;
-            }
-
-            task.currentDialIndex = nextIndex;
-            makeCallInTask(taskId, nextIndex);
-            // 拨打后进入等待挂断状态
-            enterHangupWaitState(taskId, nextIndex);
-        }
-
-        function makeCallInTask(taskId, contactIndex) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            if (!task) return;
-            
-            const contact = task.contacts[contactIndex];
-            if (!contact) return;
-
-            if (task.isPaused || task.isWaitingHangup) return;
-
-            try {
-                window.location.href = `tel:${contact.number}`;
-                
-                const now = new Date().toLocaleTimeString();
-                showStatus(`正在拨打: ${contact.number} (${contact.name || '未知'}) (${now})`, 'info');
-                
-                contact.status = 'called';
-                contact.lastCallTime = Date.now();
-                
-                // 记录拨打统计
-                logCall('called');
-                
-                saveTasksToStorage();
-                renderTaskList();
-                
-            } catch (error) {
-                console.error('拨号失败:', error);
-                contact.status = 'failed';
-                contact.retryCount++;
-                saveTasksToStorage();
-                renderTaskList();
-                showStatus(`拨号失败: ${contact.number}`, 'warning');
-            }
-        }
-
-        // 新增：进入挂断等待状态
-        function enterHangupWaitState(taskId, currentCallIndex) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            task.isWaitingHangup = true;
-            
-            // 设置一个超时，如果长时间没有确认挂断，则提醒用户
-            hangupConfirmationTimers[taskId] = setTimeout(() => {
-                showStatus(`任务 "${task.name}" 需要确认挂断才能继续`, 'warning');
-            }, 60000); // 1分钟后提醒
-            
-            saveTasksToStorage();
-            renderTaskList();
-        }
+    <!-- 右侧内容区 -->
+    <section class="content-area">
+      
+      <!-- ========== 联系人页面 ========== -->
+      <div id="contactsPage" class="page active">
+        <div class="page-header">
+          <h2>联系人管理</h2>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="addContactBtn">+ 新建</button>
+            <button class="btn btn-secondary" id="importContactsBtn">📥 导入</button>
+            <button class="btn btn-secondary" id="exportContactsBtn">📤 导出</button>
+          </div>
+        </div>
         
-        // 新增：确认挂断，开始倒计时
-        function confirmHangupAndStartTimer(taskId) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            if (!task.isWaitingHangup) return;
-            
-            // 清除挂断确认超时定时器
-            if (hangupConfirmationTimers[taskId]) {
-                clearTimeout(hangupConfirmationTimers[taskId]);
-                delete hangupConfirmationTimers[taskId];
-            }
-            
-            task.isWaitingHangup = false; // 退出等待挂断状态
-            showStatus(`确认挂断，开始倒计时 ${task.interval} 秒后拨打下一个`, 'info');
-            
-            // 开始倒计时
-            startCountdownForNextCall(taskId, task.currentDialIndex + 1);
-        }
-
-        // 新增：启动倒计时函数
-        function startCountdownForNextCall(taskId, nextIndex) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            if (!task.isActive || task.isPaused) return;
-            
-            let remainingTime = task.interval;
-            task.countdownSeconds = remainingTime;
-            
-            // 更新UI显示倒计时
-            renderTaskList();
-            
-            // 设置倒计时
-            task.countdownTimer = setInterval(() => {
-                remainingTime--;
-                task.countdownSeconds = remainingTime;
-                
-                // 更新UI
-                renderTaskList();
-                
-                if (remainingTime <= 0) {
-                    clearInterval(task.countdownTimer);
-                    delete task.countdownTimer;
-                    task.countdownSeconds = 0;
-                    
-                    // 倒计时结束，继续拨打下一个
-                    if (task.isActive && !task.isPaused && !task.isWaitingHangup) {
-                        nextCallInTask(taskId, nextIndex);
-                    }
-                }
-            }, 1000);
-        }
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+          <input type="text" id="searchContacts" placeholder="搜索姓名或电话...">
+          <select id="filterGroup">
+            <option value="">全部分组</option>
+            <option value="vip">⭐ VIP客户</option>
+            <option value="cold">❄️ 冷线索</option>
+            <option value="hot">🔥 热线索</option>
+            <option value="followup">📌 待跟进</option>
+          </select>
+        </div>
         
-        // 新增：继续倒计时函数（用于暂停后恢复）
-        function continueCountdown(taskId) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            if (!task.isActive || task.isPaused || !task.countdownTimer) return;
-            
-            // 重新设置倒计时
-            startCountdownForNextCall(taskId, task.currentDialIndex + 1);
-        }
+        <!-- 联系人列表 -->
+        <div class="contact-list" id="contactList">
+          <!-- 动态生成 -->
+        </div>
 
-        function dialContactManually(taskId, number) {
-             try {
-                window.location.href = `tel:${number}`;
-                const taskIndex = tasks.findIndex(t => t.id === taskId);
-                const taskName = taskIndex !== -1 ? tasks[taskIndex].name : '未知任务';
-                showStatus(`手动拨打: ${number} (任务: ${taskName})`, 'info');
-                
-                // 记录手动拨打统计
-                logCall('called');
-            } catch (error) {
-                console.error('手动拨号失败:', error);
-                showStatus(`手动拨号失败: ${number}`, 'warning');
-            }
-        }
+        <!-- 分页 -->
+        <div class="pagination" id="contactsPagination"></div>
+      </div>
 
-        function retryFailedContact(taskId, contactIndex) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            if (!task.contacts[contactIndex]) return;
-            
-            task.contacts[contactIndex].status = 'pending';
-            task.contacts[contactIndex].retryCount = 0;
-            saveTasksToStorage();
-            renderTaskList();
-            showStatus('号码已重新加入待拨打队列', 'info');
-        }
+      <!-- ========== 拨号盘页面 ========== -->
+      <div id="dialpadPage" class="page">
+        <div class="page-header">
+          <h2>手动拨号</h2>
+        </div>
+        
+        <div class="dialpad-container">
+          <!-- 号码显示 -->
+          <div class="dial-display">
+            <input type="tel" id="dialNumber" placeholder="输入号码或选择联系人" readonly>
+            <button class="dial-clear" id="dialClear">⌫</button>
+          </div>
+          
+          <!-- 拨号盘 -->
+          <div class="dialpad-grid">
+            <button class="dial-btn" data-digit="1">1</button>
+            <button class="dial-btn" data-digit="2">2<span>ABC</span></button>
+            <button class="dial-btn" data-digit="3">3<span>DEF</span></button>
+            <button class="dial-btn" data-digit="4">4<span>GHI</span></button>
+            <button class="dial-btn" data-digit="5">5<span>JKL</span></button>
+            <button class="dial-btn" data-digit="6">6<span>MNO</span></button>
+            <button class="dial-btn" data-digit="7">7<span>PQRS</span></button>
+            <button class="dial-btn" data-digit="8">8<span>TUV</span></button>
+            <button class="dial-btn" data-digit="9">9<span>WXYZ</span></button>
+            <button class="dial-btn" data-digit="*">*</button>
+            <button class="dial-btn" data-digit="0">0<span>+</span></button>
+            <button class="dial-btn" data-digit="#">#</button>
+          </div>
+          
+          <!-- 拨号按钮 -->
+          <div class="dial-actions">
+            <button class="btn btn-call" id="makeCallBtn">📱 立即拨打</button>
+            <button class="btn btn-secondary" id="addToTaskBtn">➕ 添加到任务</button>
+          </div>
+        </div>
+      </div>
 
-        function removeFailedContact(taskId, contactIndex) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            if (!task.contacts[contactIndex]) return;
-            
-            if (!confirm('确定要移除此失败号码吗？')) return;
-            
-            task.contacts.splice(contactIndex, 1);
-            if (contactIndex <= task.currentDialIndex) {
-                task.currentDialIndex = Math.max(0, task.currentDialIndex - 1);
-            }
-            saveTasksToStorage();
-            renderTaskList();
-            showStatus('号码已移除', 'info');
-        }
+      <!-- ========== 任务页面 ========== -->
+      <div id="tasksPage" class="page">
+        <div class="page-header">
+          <h2>自动拨号任务</h2>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="createTaskBtn">+ 新建任务</button>
+          </div>
+        </div>
+        
+        <!-- 任务状态概览 -->
+        <div class="task-overview">
+          <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-info">
+              <div class="stat-value" id="totalTasks">0</div>
+              <div class="stat-label">总任务</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-info">
+              <div class="stat-value" id="pendingTasks">0</div>
+              <div class="stat-label">待执行</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-info">
+              <div class="stat-value" id="completedTasks">0</div>
+              <div class="stat-label">已完成</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔄</div>
+            <div class="stat-info">
+              <div class="stat-value" id="runningTasks">0</div>
+              <div class="stat-label">执行中</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 任务列表 -->
+        <div class="task-list" id="taskList">
+          <!-- 动态生成 -->
+        </div>
+      </div>
 
-        function markTaskAsPending(taskId) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
+      <!-- ========== 通话记录页面 ========== -->
+      <div id="historyPage" class="page">
+        <div class="page-header">
+          <h2>通话记录</h2>
+          <div class="header-actions">
+            <button class="btn btn-secondary" id="exportHistoryBtn">📤 导出记录</button>
+            <button class="btn btn-danger" id="clearHistoryBtn">🗑️ 清空</button>
+          </div>
+        </div>
+        
+        <!-- 筛选 -->
+        <div class="filter-bar">
+          <select id="historyStatus">
+            <option value="">全部状态</option>
+            <option value="completed">已接通</option>
+            <option value="missed">未接通</option>
+            <option value="failed">拨打失败</option>
+          </select>
+          <input type="date" id="historyDateFrom">
+          <input type="date" id="historyDateTo">
+          <button class="btn btn-secondary" id="filterHistoryBtn">筛选</button>
+        </div>
+        
+        <!-- 记录列表 -->
+        <div class="history-list" id="historyList">
+          <!-- 动态生成 -->
+        </div>
+      </div>
 
-            const task = tasks[taskIndex];
+      <!-- ========== 统计页面 ========== -->
+      <div id="statsPage" class="page">
+        <div class="page-header">
+          <h2>数据统计</h2>
+          <div class="header-actions">
+            <select id="statsPeriod">
+              <option value="7">最近7天</option>
+              <option value="30" selected>最近30天</option>
+              <option value="90">最近90天</option>
+            </select>
+            <button class="btn btn-secondary" id="exportStatsBtn">📊 导出报告</button>
+          </div>
+        </div>
+        
+        <!-- 概览统计 -->
+        <div class="stats-overview">
+          <div class="big-stat">
+            <div class="big-stat-value" id="totalCalls">0</div>
+            <div class="big-stat-label">总拨打量</div>
+          </div>
+          <div class="big-stat">
+            <div class="big-stat-value" id="avgConnectRate">0%</div>
+            <div class="big-stat-label">平均接通率</div>
+          </div>
+          <div class="big-stat">
+            <div class="big-stat-value" id="avgDuration">0秒</div>
+            <div class="big-stat-label">平均通话时长</div>
+          </div>
+        </div>
+        
+        <!-- 图表区域 -->
+        <div class="charts-container">
+          <div class="chart-card">
+            <h3>每日拨打电话趋势</h3>
+            <div class="chart" id="dailyChart"></div>
+          </div>
+          <div class="chart-card">
+            <h3>接通率分布</h3>
+            <div class="chart" id="connectRateChart"></div>
+          </div>
+        </div>
+        
+        <!-- 排行榜 -->
+        <div class="leaderboard">
+          <h3>TOP 联系人（按通话次数）</h3>
+          <div id="topContactsList"></div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-            task.contacts = task.contacts.map(contact => ({
-                ...contact,
-                status: 'pending',
-                retryCount: 0,
-                lastCallTime: null,
-                tag: contact.tag || 'default'
-            }));
-            task.isActive = false;
-            task.isPaused = false;
-            task.isWaitingHangup = false;
-            task.currentDialIndex = 0;
-            
-            // 清除所有相关定时器
-            if (activeTimers[taskId]) {
-                clearTimeout(activeTimers[taskId]);
-                delete activeTimers[taskId];
-            }
-            if (task.countdownTimer) {
-                clearInterval(task.countdownTimer);
-                delete task.countdownTimer;
-                task.countdownSeconds = 0;
-            }
-            if (hangupConfirmationTimers[taskId]) {
-                clearTimeout(hangupConfirmationTimers[taskId]);
-                delete hangupConfirmationTimers[taskId];
-            }
+  <!-- ========== 模态框 ========== -->
+  
+  <!-- 新建联系人模态框 -->
+  <div class="modal" id="contactModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="contactModalTitle">新建联系人</h3>
+        <button class="modal-close" data-modal="contactModal">×</button>
+      </div>
+      <form id="contactForm">
+        <input type="hidden" id="contactId">
+        <div class="form-group">
+          <label>姓名 *</label>
+          <input type="text" id="contactName" required placeholder="输入联系人姓名">
+        </div>
+        <div class="form-group">
+          <label>电话 *</label>
+          <input type="tel" id="contactPhone" required placeholder="输入电话号码">
+        </div>
+        <div class="form-group">
+          <label>分组</label>
+          <select id="contactGroup">
+            <option value="">无分组</option>
+            <option value="vip">⭐ VIP客户</option>
+            <option value="cold">❄️ 冷线索</option>
+            <option value="hot">🔥 热线索</option>
+            <option value="followup">📌 待跟进</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>备注</label>
+          <textarea id="contactNote" rows="3" placeholder="添加备注信息..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" data-modal="contactModal">取消</button>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-            saveTasksToStorage();
-            renderTaskList();
-            showStatus(`任务 "${task.name}" 已重置`, 'info');
-        }
+  <!-- 批量导入模态框 -->
+  <div class="modal" id="importModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>批量导入联系人</h3>
+        <button class="modal-close" data-modal="importModal">×</button>
+      </div>
+      <div class="import-area" id="importDropZone">
+        <div class="import-icon">📁</div>
+        <p>拖拽文件到此处，或点击选择文件</p>
+        <p class="import-hint">支持 CSV、TXT、Excel 格式</p>
+        <input type="file" id="importFileInput" accept=".csv,.txt,.xlsx,.xls" hidden>
+        <button class="btn btn-primary" id="selectFileBtn">选择文件</button>
+      </div>
+      <div class="import-preview" id="importPreview" style="display:none;">
+        <h4>预览数据（显示前5条）</h4>
+        <div id="previewTable"></div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" id="cancelImportBtn">取消</button>
+          <button class="btn btn-primary" id="confirmImportBtn">确认导入</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        function deleteTask(taskId) {
-            if (!confirm('确定要删除这个任务吗？此操作不可撤销。')) return;
-            
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex !== -1) {
-                if (activeTimers[taskId]) {
-                    clearTimeout(activeTimers[taskId]);
-                    delete activeTimers[taskId];
-                }
-                if (tasks[taskIndex].countdownTimer) {
-                     clearInterval(tasks[taskIndex].countdownTimer);
-                     delete tasks[taskIndex].countdownTimer;
-                }
-                if (hangupConfirmationTimers[taskId]) {
-                    clearTimeout(hangupConfirmationTimers[taskId]);
-                    delete hangupConfirmationTimers[taskId];
-                }
-                tasks.splice(taskIndex, 1);
-                saveTasksToStorage();
-                renderTaskList();
-                showStatus('任务已删除', 'info');
-            }
-        }
+  <!-- 新建任务模态框 -->
+  <div class="modal" id="taskModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>新建拨号任务</h3>
+        <button class="modal-close" data-modal="taskModal">×</button>
+      </div>
+      <form id="taskForm">
+        <div class="form-group">
+          <label>任务名称 *</label>
+          <input type="text" id="taskName" required placeholder="给任务起个名字">
+        </div>
+        <div class="form-group">
+          <label>选择联系人 *</label>
+          <div class="contact-selector">
+            <div class="selected-contacts" id="selectedContacts">
+              <!-- 已选联系人 -->
+            </div>
+            <button type="button" class="btn btn-secondary" id="selectContactsBtn">+ 选择联系人</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>拨号间隔（秒）</label>
+            <input type="number" id="taskInterval" value="30" min="5" max="300">
+          </div>
+          <div class="form-group">
+            <label>重拨次数</label>
+            <input type="number" id="taskRetry" value="2" min="0" max="5">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>开始时间</label>
+          <input type="datetime-local" id="taskStartTime">
+        </div>
+        <div class="form-group">
+          <label>执行模式</label>
+          <select id="taskMode">
+            <option value="sequential">顺序拨打</option>
+            <option value="random">随机顺序</option>
+            <option value="priority">按优先级</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" data-modal="taskModal">取消</button>
+          <button type="submit" class="btn btn-primary">创建任务</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-        function updateContactTag(taskId, contactIndex, newTag) {
-            const taskIndex = tasks.findIndex(t => t.id === taskId);
-            if (taskIndex === -1) return;
-            
-            const task = tasks[taskIndex];
-            if (!task.contacts[contactIndex]) return;
-            
-            task.contacts[contactIndex].tag = newTag;
-            saveTasksToStorage();
-            renderTaskList();
-            showStatus('号码标签已更新', 'info');
-        }
+  <!-- 联系人选择器模态框 -->
+  <div class="modal" id="contactPickerModal">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3>选择联系人</h3>
+        <button class="modal-close" data-modal="contactPickerModal">×</button>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="pickerSearch" placeholder="搜索联系人...">
+      </div>
+      <div class="picker-list" id="pickerContactList">
+        <!-- 动态生成 -->
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" data-modal="contactPickerModal">取消</button>
+        <button type="button" class="btn btn-primary" id="confirmSelectionBtn">确认选择</button>
+      </div>
+    </div>
+  </div>
 
-        // --- 辅助函数 ---
-        function showStatus(message, type = 'info') {
-            statusMessageEl.textContent = message;
-            statusMessageEl.className = 'status ' + type;
-            statusMessageEl.style.display = 'block';
-            
-            setTimeout(() => {
-                statusMessageEl.style.display = 'none';
-            }, 5000);
-        }
+  <!-- 设置模态框 -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>系统设置</h3>
+        <button class="modal-close" data-modal="settingsModal">×</button>
+      </div>
+      <form id="settingsForm">
+        <div class="form-group">
+          <label>拨号延迟（秒）</label>
+          <input type="number" id="settingDialDelay" value="3" min="1" max="10">
+          <small>点击拨号后，等待几秒再打开电话应用</small>
+        </div>
+        <div class="form-group">
+          <label>工作时间段</label>
+          <div class="time-range">
+            <input type="time" id="settingWorkStart" value="09:00">
+            <span>至</span>
+            <input type="time" id="settingWorkEnd" value="18:00">
+          </div>
+          <small>仅在此时间段内执行自动拨号</small>
+        </div>
+        <div class="form-group">
+          <label>休息日</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" id="restSat" checked> 周六</label>
+            <label><input type="checkbox" id="restSun" checked> 周日</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>数据存储</label>
+          <select id="settingStorage">
+            <option value="local">本地存储</option>
+            <option value="cloud">云端同步（需要配置）</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" data-modal="settingsModal">取消</button>
+          <button type="submit" class="btn btn-primary">保存设置</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-        // --- 事件监听器 ---
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('task-action-btn')) {
-                const action = e.target.getAttribute('data-action');
-                const taskId = e.target.getAttribute('data-task-id');
+  <!-- 拨号确认提示 -->
+  <div class="modal" id="callConfirmModal">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <h3>确认拨号</h3>
+        <button class="modal-close" data-modal="callConfirmModal">×</button>
+      </div>
+      <div class="call-confirm-content">
+        <div class="call-icon">📞</div>
+        <p class="call-number" id="confirmCallNumber"></p>
+        <p class="call-name" id="confirmCallName"></p>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" data-modal="callConfirmModal">取消</button>
+        <button type="button" class="btn btn-call" id="confirmCallBtn">确认拨打</button>
+      </div>
+    </div>
+  </div>
 
-                switch(action) {
-                    case 'import':
-                        importToTask(taskId);
-                        break;
-                    case 'append':
-                        appendToTask(taskId);
-                        break;
-                    case 'start-dial':
-                        startBatchDialForTask(taskId);
-                        break;
-                    case 'pause-dial':
-                        pauseBatchDialForTask(taskId);
-                        break;
-                    case 'reset':
-                        markTaskAsPending(taskId);
-                        break;
-                    case 'delete':
-                        deleteTask(taskId);
-                        break;
-                }
-                return;
-            }
+  <!-- Toast 提示 -->
+  <div class="toast" id="toast"></div>
 
-            if (e.target.classList.contains('contact-action-btn')) {
-                const action = e.target.getAttribute('data-action');
-                const taskId = e.target.getAttribute('data-task-id');
-                const contactIndex = e.target.getAttribute('data-contact-index');
-                const contactNumber = e.target.getAttribute('data-contact-number');
+  <!-- 任务执行浮窗 -->
+  <div class="floating-panel" id="floatingPanel" style="display:none;">
+    <div class="floating-header">
+      <span class="floating-title">🔄 任务执行中</span>
+      <button class="floating-close" id="stopTaskBtn">停止</button>
+    </div>
+    <div class="floating-content">
+      <div class="floating-progress">
+        <div class="progress-text" id="progressText">0 / 0</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+      <div class="floating-current" id="floatingCurrent">
+        正在拨打：-
+      </div>
+    </div>
+  </div>
 
-                switch(action) {
-                    case 'dial-manual':
-                        dialContactManually(taskId, contactNumber);
-                        break;
-                    case 'retry':
-                        retryFailedContact(taskId, contactIndex);
-                        break;
-                    case 'remove':
-                        removeFailedContact(taskId, contactIndex);
-                        break;
-                    case 'confirm-hangup': // 新增：确认挂断动作
-                        confirmHangupAndStartTimer(taskId);
-                        break;
-                }
-                return;
-            }
-
-            if (e.target.id === 'createTaskBtn') {
-                createNewTask();
-            }
-        });
-
-        // 处理间隔时间输入框变化
-        document.addEventListener('change', function(e) {
-            if (e.target.id.startsWith('interval-')) {
-                const taskId = e.target.id.replace('interval-', '');
-                const newInterval = parseInt(e.target.value);
-                if (!isNaN(newInterval) && newInterval >= 5) {
-                    const taskIndex = tasks.findIndex(t => t.id === taskId);
-                    if (taskIndex !== -1) {
-                        tasks[taskIndex].interval = newInterval;
-                        // 如果任务正在进行倒计时，则更新倒计时时间
-                        if (tasks[taskIndex].isActive && tasks[taskIndex].countdownTimer) {
-                            clearInterval(tasks[taskIndex].countdownTimer);
-                            tasks[taskIndex].countdownSeconds = newInterval;
-                            startCountdownForNextCall(taskId, tasks[taskIndex].currentDialIndex + 1);
-                        }
-                        saveTasksToStorage();
-                        showStatus(`任务 "${tasks[taskIndex].name}" 间隔时间已更新为 ${newInterval} 秒`, 'info');
-                    }
-                }
-            }
-        });
-
-        // 处理标签选择框变化
-        document.addEventListener('change', function(e) {
-            if (e.target.classList.contains('tag-select')) {
-                const taskId = e.target.getAttribute('data-task-id');
-                const contactIndex = e.target.getAttribute('data-contact-index');
-                const newTag = e.target.value;
-                updateContactTag(taskId, contactIndex, newTag);
-            }
-        });
-
-        downloadTemplateLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            downloadCSVTemplate();
-        });
-
-        // 初始化
-        defaultIntervalEl.value = defaultInterval;
-        updateTodayStats(); // 加载时更新统计
-        renderTaskList();
-    </script>
+  <script src="app.js"></script>
 </body>
 </html>
