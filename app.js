@@ -527,7 +527,10 @@ function renderTasks() {
       <div class="task-card" data-id="${task.id}" data-action="detail">
         <div class="task-header">
           <div class="task-title">${task.name}</div>
-          <span class="task-status ${task.status}">${getStatusLabel(task.status)}</span>
+          <div class="task-header-right">
+            <button class="btn-delete-icon" data-action="delete" data-id="${task.id}">🗑️</button>
+            <span class="task-status ${task.status}">${getStatusLabel(task.status)}</span>
+          </div>
         </div>
         <div class="task-meta">
           <span>📞 ${task.total}个</span>
@@ -547,12 +550,9 @@ function renderTasks() {
         </div>
         <div class="task-actions">
           ${task.status === 'pending' ? `<button class="btn-start" data-action="start" data-id="${task.id}">▶️ 开始</button>` : ''}
-          ${task.status === 'running' && task.mode === 'manual' && pending > 0 ? `<button class="btn-start" data-action="next-now" data-id="${task.id}">☎️ 拨打下一个</button>` : ''}
+          ${task.status === 'running' && task.mode === 'manual' && pending > 0 ? `<button class="btn-start" data-action="next-now" data-id="${task.id}">▶️ 开始</button>` : ''}
           ${task.status === 'running' ? `<button class="btn-pause" data-action="pause" data-id="${task.id}">⏸️ 暂停</button>` : ''}
           ${task.status === 'paused' ? `<button class="btn-start" data-action="resume" data-id="${task.id}">▶️ 继续</button>` : ''}
-        </div>
-        <div class="task-delete-row">
-          <button class="btn-delete" data-action="delete" data-id="${task.id}">🗑️ 删除任务</button>
         </div>
       </div>`;
   }).join('');
