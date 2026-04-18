@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AutoDialer - 智能自动拨号系统</title>
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
   <header class="app-header">
@@ -14,16 +14,15 @@
 
   <main class="main-content">
     <nav class="sidebar">
-      <button class="nav-item active" data-tab="contacts"><span class="nav-icon">👥</span><span class="nav-label">联系人</span></button>
       <button class="nav-item" data-tab="dialpad"><span class="nav-icon">🔢</span><span class="nav-label">拨号盘</span></button>
-      <button class="nav-item" data-tab="tasks"><span class="nav-icon">📋</span><span class="nav-label">任务</span></button>
+      <button class="nav-item active" data-tab="tasks"><span class="nav-icon">📋</span><span class="nav-label">任务</span></button>
       <button class="nav-item" data-tab="history"><span class="nav-icon">📜</span><span class="nav-label">记录</span></button>
       <button class="nav-item" data-tab="stats"><span class="nav-icon">📊</span><span class="nav-label">统计</span></button>
     </nav>
 
     <section class="content-area">
       <!-- 联系人页面 -->
-      <div id="contactsPage" class="page active">
+      <div id="contactsPage" class="page">
         <div class="page-header">
           <h2>联系人管理</h2>
           <div class="header-actions">
@@ -69,7 +68,7 @@
       </div>
 
       <!-- 任务页面 -->
-      <div id="tasksPage" class="page">
+      <div id="tasksPage" class="page active">
         <div class="page-header">
           <h2>自动拨号任务</h2>
           <div class="header-actions">
@@ -231,10 +230,17 @@
         <h3>📋 任务详情 — <span id="taskDetailTitle"></span></h3>
         <button class="modal-close" id="closeTaskDetailBtn">×</button>
       </div>
+      <!-- Tab 切换 -->
+      <div class="detail-tabs">
+        <button class="detail-tab active" data-detail-tab="pending" id="detailTabPending">○ 待拨打 <span id="detailPendingCount">0</span></button>
+        <button class="detail-tab" data-detail-tab="called" id="detailTabCalled">📞 已拨打 <span id="detailCalledCount">0</span></button>
+        <button class="detail-tab" data-detail-tab="connected" id="detailTabConnected">✅ 已接通 <span id="detailConnectedCount">0</span></button>
+      </div>
+      <!-- 操作按钮 -->
       <div class="task-detail-actions">
-        <button class="btn btn-secondary" id="reAddFailedBtn">🔄 重置未接号码</button>
-        <button class="btn btn-primary" id="reAddAllBtn">↩️ 全部重置</button>
-        <button class="btn btn-warning" id="resetTaskStatusBtn">🔁 重置所有状态</button>
+        <button class="btn btn-secondary" id="reAddFailedBtn" title="将未接通的号码重置为待拨打">🔄 未接通重新拨打</button>
+        <button class="btn btn-primary" id="createFailedTaskBtn" title="将未接通号码生成新任务">📋 未接通生成新任务</button>
+        <button class="btn btn-danger" id="reAddAllBtn" title="将所有号码重置为待拨打">↩️ 全部重置</button>
       </div>
       <div class="detail-list" id="taskDetailList"></div>
     </div>
@@ -354,6 +360,6 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
