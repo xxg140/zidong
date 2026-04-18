@@ -340,7 +340,7 @@ function handleFileImport(e) {
   document.getElementById('importFileName').textContent = '📄 ' + file.name;
   const reader = new FileReader();
   reader.onload = ev => parseImportFile(ev.target.result, file.name);
-  reader.readAsText(file);
+  reader.readAsText(file, 'UTF-8');
 }
 
 function parseCSVLine(line) {
