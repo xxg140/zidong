@@ -541,7 +541,7 @@ function renderTasks() {
           <div style="font-size:12px;color:#8E8E93;margin-top:4px;">${called} / ${task.total} (${prog}%)</div>
         </div>
         <div class="task-actions">
-          ${pending > 0 ? `<button class="btn btn-primary" onclick="dialFirstPending('${task.id}')" style="font-size:14px;padding:8px 20px;">📞 拨打</button>` : ''}
+          ${pending > 0 ? `<button class="btn btn-primary" onclick="event.stopPropagation();dialFirstPending('${task.id}')" style="font-size:14px;padding:8px 20px;">📞 拨打</button>` : ''}
           ${called > 0 ? `<button class="btn btn-secondary" onclick="openDetailAndReset('${task.id}')" style="font-size:13px;padding:6px 12px;">🔄 重置全部</button>` : ''}
           ${notAnswered > 0 ? `<button class="btn btn-warning" onclick="openDetailAndCreateFailed('${task.id}')" style="font-size:13px;padding:6px 12px;">📋 未接通生成</button>` : ''}
         </div>
@@ -552,6 +552,8 @@ function renderTasks() {
 function getStatusLabel(s) { return { pending: '待执行', running: '执行中', paused: '已暂停', completed: '已完成' }[s] || s; }
 
 function handleTaskAction(e) {
+  // 如果点击的是按钮区域，不触发卡片点击
+  if (e.target.closest('.task-actions')) { e.stopPropagation(); return; }
   const btn = e.target.closest('button[data-action]');
   if (btn) {
     e.stopPropagation();
@@ -813,17 +815,19 @@ function dialFirstPending(id) {
   if (!task) return;
   const first = task.contacts.find(x => x.dialStatus === 'pending');
   if (!first) { showToast('没有待拨打的号码了', 'warning'); return; }
+  // 标记为已拨打（未接通，等待后续标记）
+  const idx = task.contacts.indexOf(first);
+  task.contacts[idx].dialStatus = 'called';
+  task.contacts[idx].dialedAt = new Date().toISOString();
   // 在卡片上显示正在拨打
   task.currentDialing = { name: first.name, phone: first.phone, note: first.note || '' };
   task.status = 'running';
-  DB.update(DB.tasks, task.id, { currentDialing: task.currentDialing, status: 'running' });
+  DB.update(DB.tasks, task.id, { contacts: task.contacts, currentDialing: task.currentDialing, status: 'running' });
   state.tasks = DB.get(DB.tasks);
   renderTasks();
   // 触发实际拨打
-  const idx = task.contacts.indexOf(first);
-  const c = task.contacts[idx];
-  window.location.href = `tel:${c.phone}`;
-  showToast(`正在拨打：${c.name || c.phone}`, 'info');
+  window.location.href = `tel:${first.phone}`;
+  showToast(`正在拨打：${first.name || first.phone}`, 'info');
 }
 
 // 从卡片触发：打开详情并重置
