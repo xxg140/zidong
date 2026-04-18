@@ -87,6 +87,7 @@ function setupEventListeners() {
   document.getElementById('filterGroup').addEventListener('change', renderContacts);
   // 导入
   document.getElementById('importContactsBtn')?.addEventListener('click', openImportModal);
+  document.getElementById('importTaskBtn').addEventListener('click', openImportModal);
   document.getElementById('addTaskBtn').addEventListener('click', () => openModal('manualAddModal'));
   document.getElementById('confirmManualAddBtn').addEventListener('click', confirmManualAdd);
   document.getElementById('downloadTemplateBtn').addEventListener('click', downloadTemplate);
