@@ -72,7 +72,7 @@ function setupEvents() {
   document.getElementById('importBtn').addEventListener('click', openImportModal);
   document.getElementById('downloadTplBtn').addEventListener('click', downloadTemplate);
   document.getElementById('fileInput').addEventListener('change', handleFileChange);
-  document.getElementById('confirmImportBtn').addEventListener('click', confirmImport);
+  // confirmImportBtn 使用 HTML onclick 直接绑定（见 index.html）
 
   // 新建
   document.getElementById('addTaskBtn').addEventListener('click', () => openModal('addModal'));
@@ -468,25 +468,38 @@ function parseImportText(text, filename) {
 }
 
 function confirmImport() {
-  const taskName = document.getElementById('importTaskName').value.trim();
-  if (!taskName) { showToast('请输入任务名称'); return; }
-  const contacts = state._importContacts;
-  if (!contacts || !contacts.length) { showToast('没有可导入的号码'); return; }
+  console.log('[confirmImport] 开始执行');
+  try {
+    const taskNameEl = document.getElementById('importTaskName');
+    console.log('[confirmImport] taskNameEl:', taskNameEl);
+    if (!taskNameEl) { alert('页面加载异常，请刷新重试'); return; }
+    const taskName = taskNameEl.value.trim();
+    console.log('[confirmImport] taskName:', taskName);
+    if (!taskName) { showToast('请输入任务名称'); return; }
+    const contacts = state._importContacts;
+    console.log('[confirmImport] contacts:', contacts, 'length:', contacts ? contacts.length : 'null/undefined');
+    if (!contacts || !contacts.length) { showToast('没有可导入的号码，请先上传文件'); return; }
 
-  const task = {
-    id: genId(),
-    name: taskName,
-    contacts,
-    currentCall: null,
-    createdAt: new Date().toISOString()
-  };
+    const task = {
+      id: genId(),
+      name: taskName,
+      contacts,
+      currentCall: null,
+      createdAt: new Date().toISOString()
+    };
+    console.log('[confirmImport] task创建成功:', task.name, task.contacts.length);
 
-  state.tasks.push(task);
-  state._importContacts = null;
-  saveTasks();
-  closeModal('importModal');
-  render();
-  showToast(`任务「${taskName}」已创建 (${contacts.length}个号码)`);
+    state.tasks.push(task);
+    state._importContacts = null;
+    saveTasks();
+    console.log('[confirmImport] saveTasks完成');
+    closeModal('importModal');
+    render();
+    showToast(`任务「${taskName}」已创建 (${contacts.length}个号码)`);
+  } catch(e) {
+    alert('创建失败：' + e.message);
+    console.error('[confirmImport] 异常:', e);
+  }
 }
 
 // ========== 新建任务 ==========
