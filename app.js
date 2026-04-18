@@ -120,10 +120,6 @@ function setupEventListeners() {
     renderHistory();
   });
   document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
-  document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
-  // 统计
-  document.getElementById('statsPeriod').addEventListener('change', renderStats);
-  document.getElementById('exportStatsBtn').addEventListener('click', exportStats);
   // 设置
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
   document.getElementById('settingsForm').addEventListener('submit', saveSettings);
@@ -232,6 +228,7 @@ function doDial(name, phone, contactId) {
   const rec = { contactId, name, phone, status: 'dialed', duration: 0, taskId: state.currentTask?.id || null, dialedAt: new Date().toISOString() };
   DB.add(DB.history, rec);
   state.history = DB.get(DB.history);
+  renderTodayCount();
 }
 
 function resetContactForm() {
@@ -494,10 +491,6 @@ function downloadFile(content, filename, type) {
 
 // ========== 任务管理 ==========
 function renderTasks() {
-  document.getElementById('totalTasks').textContent = state.tasks.length;
-  document.getElementById('pendingTasks').textContent = state.tasks.filter(t => t.status === 'pending').length;
-  document.getElementById('completedTasks').textContent = state.tasks.filter(t => t.status === 'completed').length;
-  document.getElementById('runningTasks').textContent = state.tasks.filter(t => t.status === 'running').length;
   const c = document.getElementById('taskList');
   if (!state.tasks.length) {
     c.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>暂无拨号任务</p><p style="font-size:13px;color:#8E8E93;">点击上方「手动添加」按钮创建任务</p></div>';
@@ -1088,8 +1081,14 @@ function saveSettings(e) {
 function renderAll() {
   renderContacts();
   renderTasks();
-  renderHistory();
-  renderStats();
+  renderTodayCount();
+}
+
+function renderTodayCount() {
+  const today = new Date().toISOString().split('T')[0];
+  const count = state.history.filter(h => new Date(h.dialedAt).toISOString().split('T')[0] === today).length;
+  const el = document.getElementById('todayCallCount');
+  if (el) el.textContent = count;
 }
 
 document.addEventListener('DOMContentLoaded', init);
