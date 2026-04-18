@@ -86,15 +86,12 @@ function setupEventListeners() {
   document.getElementById('searchContacts').addEventListener('input', renderContacts);
   document.getElementById('filterGroup').addEventListener('change', renderContacts);
   // 导入
-  document.getElementById('importContactsBtn').addEventListener('click', openImportModal);
+  document.getElementById('importContactsBtn')?.addEventListener('click', openImportModal);
   document.getElementById('addTaskBtn').addEventListener('click', () => openModal('manualAddModal'));
   document.getElementById('confirmManualAddBtn').addEventListener('click', confirmManualAdd);
-  document.getElementById('importTaskBtn')?.addEventListener('click', () => openImportModal('task'));
   document.getElementById('downloadTemplateBtn').addEventListener('click', downloadTemplate);
   document.getElementById('importFileInput').addEventListener('change', handleFileImport);
-  document.getElementById('tabContacts').addEventListener('click', () => setImportTab('contacts'));
-  document.getElementById('tabTask').addEventListener('click', () => setImportTab('task'));
-  document.getElementById('confirmImportContactsBtn').addEventListener('click', confirmImportContacts);
+
   document.getElementById('confirmImportTaskBtn').addEventListener('click', confirmImportTask);
   document.getElementById('cancelImportBtn')?.addEventListener('click', resetImportModal);
   // 导出
@@ -307,30 +304,19 @@ function appendDigit(d) {
 }
 
 // ========== 导入功能 ==========
-function openImportModal(tab = 'contacts') {
+function openImportModal() {
   resetImportModal();
-  setImportTab(tab);
   openModal('importModal');
 }
 
 function resetImportModal() {
   state.importContacts = [];
+  state.importTab = 'task';
   document.getElementById('importFileInput').value = '';
   document.getElementById('importFileName').textContent = '';
-  document.getElementById('importContactsOptions').style.display = 'none';
-  document.getElementById('importTaskOptions').style.display = 'none';
-  document.getElementById('importContactsPreview').style.display = 'none';
+  document.getElementById('importTaskOptions').style.display = 'block';
   document.getElementById('importTaskPreviewArea').style.display = 'none';
-}
-
-function setImportTab(tab) {
-  state.importTab = tab;
-  document.querySelectorAll('.import-tab').forEach(t => t.classList.toggle('active', t.dataset.importTab === tab));
-  document.getElementById('importContactsOptions').style.display = tab === 'contacts' ? 'block' : 'none';
-  document.getElementById('importTaskOptions').style.display = tab === 'task' ? 'block' : 'none';
-  if (tab === 'task' && !document.getElementById('importTaskName').value) {
-    document.getElementById('importTaskName').value = `${new Date().toLocaleDateString('zh-CN')}外呼任务`;
-  }
+  document.getElementById('importTaskName').value = `${new Date().toLocaleDateString('zh-CN')}外呼任务`;
 }
 
 function downloadTemplate() {
@@ -409,21 +395,14 @@ function parseImportFile(content, filename) {
   }
   if (!contacts.length) { showToast('未找到有效电话号码，请检查：1) 表头是否有"电话"列 2) 电话号码是否为纯数字格式', 'error'); return; }
   state.importContacts = contacts;
-
-  if (state.importTab === 'contacts') {
-    document.getElementById('importContactsOptions').style.display = 'block';
-    document.getElementById('importContactsCount').textContent = contacts.length;
-    document.getElementById('importContactsPreviewList').innerHTML = contacts.slice(0, 10).map(c => `${c.name} - ${c.phone}`).join('<br>');
-    document.getElementById('importContactsPreview').style.display = 'block';
-  } else {
-    document.getElementById('importTaskOptions').style.display = 'block';
-    const dedup = document.getElementById('importTaskDedup').checked;
-    const list = dedup ? dedupContacts(contacts) : contacts;
-    document.getElementById('importTaskCount').textContent = list.length;
-    document.getElementById('importTaskPreviewList').innerHTML = list.slice(0, 10).map(c => `${c.name} - ${c.phone}`).join('<br>');
-    if (list.length > 10) document.getElementById('importTaskPreviewList').innerHTML += `<br>...还有${list.length - 10}条`;
-    document.getElementById('importTaskPreviewArea').style.display = 'block';
-  }
+  // 始终显示任务导入选项
+  document.getElementById('importTaskOptions').style.display = 'block';
+  const dedup = document.getElementById('importTaskDedup').checked;
+  const list = dedup ? dedupContacts(contacts) : contacts;
+  document.getElementById('importTaskCount').textContent = list.length;
+  document.getElementById('importTaskPreviewList').innerHTML = list.slice(0, 10).map(c => `${c.name} - ${c.phone}`).join('<br>');
+  if (list.length > 10) document.getElementById('importTaskPreviewList').innerHTML += `<br>...还有${list.length - 10}条`;
+  document.getElementById('importTaskPreviewArea').style.display = 'block';
 }
 
 function dedupContacts(contacts) {
@@ -432,19 +411,6 @@ function dedupContacts(contacts) {
     if (seen.has(c.phone)) return false;
     seen.add(c.phone); return true;
   });
-}
-
-function confirmImportContacts() {
-  const contacts = document.getElementById('importDedup').checked ? dedupContacts(state.importContacts) : state.importContacts;
-  if (!contacts.length) { showToast('没有可导入的联系人', 'error'); return; }
-  contacts.forEach(c => {
-    const existing = state.contacts.find(x => x.phone === c.phone);
-    if (!existing) DB.add(DB.contacts, c);
-  });
-  state.contacts = DB.get(DB.contacts);
-  closeModal('importModal');
-  renderContacts();
-  showToast(`已导入 ${contacts.length} 个联系人`, 'success');
 }
 
 function confirmManualAdd() {
