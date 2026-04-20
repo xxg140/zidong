@@ -74,25 +74,22 @@ function setupEvents() {
   document.getElementById('fileInput').addEventListener('change', handleFileChange);
   // confirmImportBtn 使用 HTML onclick 直接绑定（见 index.html）
 
-  // 新建
-  document.getElementById('addTaskBtn').addEventListener('click', () => openModal('addModal'));
+  // 手动添加
+  document.getElementById('addTaskBtn').addEventListener('click', openAddModal);
   document.getElementById('confirmAddBtn').addEventListener('click', confirmAddTask);
 
   // 详情
   document.getElementById('resetAllBtn').addEventListener('click', resetAll);
   document.getElementById('exportCalledBtn').addEventListener('click', exportCalled);
+  document.getElementById('createMissedTaskBtn').addEventListener('click', createMissedTask);
 
   // 页面可见性变化：用户从电话界面返回
   document.addEventListener('visibilitychange', onVisibilityChange);
 }
 
 function onVisibilityChange() {
-  if (!document.hidden) {
-    // 用户从电话界面回来了
-    if (state.dialing) {
-      openModal('resultModal');
-    }
-  }
+  // 用户从电话界面返回时，页面会自动刷新显示结果按钮
+  // 不需要额外操作
 }
 
 // ========== 主渲染 ==========
@@ -109,7 +106,7 @@ function renderTasks() {
       <div class="empty-state">
         <div class="empty-icon">📋</div>
         <div class="empty-text">暂无任务</div>
-        <div class="empty-sub">点击下方「新建任务」开始</div>
+        <div class="empty-sub">点击上方「手动添加号码」或「导入」开始</div>
       </div>`;
     return;
   }
@@ -122,6 +119,23 @@ function renderTasks() {
     const current = task.currentCall || null;
     const done = pending === 0;
 
+    // 判断是否正在等待结果（有 dialing 且是当前任务）
+    const isWaitingResult = state.dialing && state.dialing.taskId === task.id;
+
+    let actionHtml = '';
+    if (isWaitingResult) {
+      // 显示结果选择按钮
+      actionHtml = `
+        <div class="result-btns-inline">
+          <button class="btn btn-success" onclick="markResultAndNext('connected')">✅ 已接通，拨打下一个</button>
+          <button class="btn btn-danger" onclick="markResultAndNext('missed')">❌ 未接通，拨打下一个</button>
+        </div>`;
+    } else if (done) {
+      actionHtml = `<button class="btn-dial btn-dial-done" disabled>✅ 全部完成</button>`;
+    } else {
+      actionHtml = `<button class="btn-dial" onclick="dialNext('${task.id}')">📞 拨打</button>`;
+    }
+
     const currentCallHtml = current ? `
       <div class="current-call">
         <div class="current-call-icon">📞</div>
@@ -129,11 +143,8 @@ function renderTasks() {
           <div class="current-call-name">${current.name || '未知'}</div>
           <div class="current-call-phone">${current.phone}</div>
         </div>
-        <div style="font-size:12px;color:var(--success);background:#E8F5E9;padding:4px 10px;border-radius:8px;">正在拨打</div>
+        ${isWaitingResult ? '<div style="font-size:12px;color:var(--warning);background:#FFF3E0;padding:4px 10px;border-radius:8px;">等待结果</div>' : '<div style="font-size:12px;color:var(--success);background:#E8F5E9;padding:4px 10px;border-radius:8px;">正在拨打</div>'}
       </div>` : '';
-
-    const dialBtnClass = done ? 'btn-dial btn-dial-done' : 'btn-dial';
-    const dialBtnLabel = done ? '✅ 全部完成' : '📞 拨打';
 
     return `
       <div class="task-card" data-id="${task.id}">
@@ -155,7 +166,7 @@ function renderTasks() {
         </div>
         ${currentCallHtml}
         <div class="dial-btn-area">
-          <button class="${dialBtnClass}" onclick="dialNext('${task.id}')" ${done ? 'disabled' : ''}>${dialBtnLabel}</button>
+          ${actionHtml}
         </div>
       </div>`;
   }).join('');
@@ -180,7 +191,7 @@ function dialNext(taskId) {
   const idx = task.contacts.indexOf(target);
 
   // 记录到当前拨打
-  task.currentCall = { name: target.name, phone: target.phone };
+  task.currentCall = { name: target.name, phone: target.phone, idx };
   state.dialing = { taskId, idx, phone: target.phone, name: target.name };
 
   saveTasks();
@@ -190,9 +201,8 @@ function dialNext(taskId) {
   window.location.href = 'tel:' + target.phone;
 }
 
-// 页面返回后：弹出结果选择
-function markResult(result) {
-  closeModal('resultModal');
+// 标记拨打结果并自动拨打下一个
+function markResultAndNext(result) {
   if (!state.dialing) return;
 
   const { taskId, idx, phone, name } = state.dialing;
@@ -202,8 +212,6 @@ function markResult(result) {
   // 标记号码状态
   task.contacts[idx].status = result === 'connected' ? 'connected' : 'missed';
   task.contacts[idx].calledAt = new Date().toISOString();
-  task.currentCall = null;
-  state.dialing = null;
 
   // 写入历史
   state.history.push({
@@ -217,10 +225,33 @@ function markResult(result) {
     time: new Date().toISOString()
   });
 
-  saveTasks();
-  saveHistory();
-  render();
-  showToast(result === 'connected' ? '✅ 已标记为接通' : '❌ 已标记为未接通');
+  // 找下一个待拨打
+  const pending = task.contacts.filter(x => x.status === 'pending');
+
+  if (pending.length > 0) {
+    // 还有下一个，自动拨打
+    const next = pending[0];
+    const nextIdx = task.contacts.indexOf(next);
+    task.currentCall = { name: next.name, phone: next.phone, idx: nextIdx };
+    state.dialing = { taskId, idx: nextIdx, phone: next.phone, name: next.name };
+
+    saveTasks();
+    saveHistory();
+    render();
+
+    // 延迟一点再触发拨号，让页面刷新一下
+    setTimeout(() => {
+      window.location.href = 'tel:' + next.phone;
+    }, 300);
+  } else {
+    // 全部完成
+    task.currentCall = null;
+    state.dialing = null;
+    saveTasks();
+    saveHistory();
+    render();
+    showToast('✅ 全部拨打完成');
+  }
 }
 
 // ========== 任务详情 ==========
@@ -277,9 +308,9 @@ function renderDetailList() {
       : c.status === 'missed'
       ? '<span class="detail-item-status status-missed">❌ 未接</span>'
       : '';
-    const dialBtn = state.detailTab === 'pending'
+    const actionBtn = state.detailTab === 'pending'
       ? `<button class="btn btn-success" style="padding:6px 14px;font-size:13px;" onclick="dialFromDetail('${task.id}', ${origIdx})">📞 拨打</button>`
-      : '';
+      : `<button class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="resetContact('${task.id}', ${origIdx})">🔄 重置</button>`;
     return `
       <div class="detail-item">
         <div class="detail-item-info">
@@ -287,7 +318,7 @@ function renderDetailList() {
           <div class="detail-item-phone">${c.phone}</div>
         </div>
         ${statusBadge}
-        ${dialBtn}
+        ${actionBtn}
       </div>`;
   }).join('');
 }
@@ -307,7 +338,20 @@ function dialFromDetail(taskId, idx) {
   window.location.href = 'tel:' + c.phone;
 }
 
-// ========== 重置 ==========
+// ========== 重置单个号码 ==========
+function resetContact(taskId, idx) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task || !task.contacts[idx]) return;
+
+  task.contacts[idx].status = 'pending';
+  task.contacts[idx].calledAt = null;
+  saveTasks();
+  render();
+  renderDetailList();
+  showToast('已重置为待拨打');
+}
+
+// ========== 重置全部 ==========
 function resetAll() {
   if (!state.currentDetail) return;
   if (!confirm('确定重置？所有号码将恢复为待拨打状态。')) return;
@@ -337,6 +381,26 @@ function exportCalled() {
   const csv = '\uFEFF姓名,电话,结果,时间\n' + rows.join('\n');
   downloadFile(csv, `${state.currentDetail.name}_已拨打.csv`, 'text/csv;charset=utf-8');
   showToast(`已导出 ${called.length} 条`);
+}
+
+// ========== 未接通创建新任务 ==========
+function createMissedTask() {
+  if (!state.currentDetail) return;
+  const missed = state.currentDetail.contacts.filter(x => x.status === 'missed');
+  if (missed.length === 0) { showToast('没有未接通的号码'); return; }
+
+  const newTask = {
+    id: genId(),
+    name: `${state.currentDetail.name}_未接通`,
+    contacts: missed.map(c => ({ name: c.name, phone: c.phone, status: 'pending', calledAt: null })),
+    currentCall: null,
+    createdAt: new Date().toISOString()
+  };
+
+  state.tasks.push(newTask);
+  saveTasks();
+  render();
+  showToast(`已创建新任务「${newTask.name}」(${missed.length}个号码)`);
 }
 
 function downloadFile(content, filename, type) {
@@ -494,41 +558,78 @@ function confirmImport() {
   }
 }
 
-// ========== 新建任务 ==========
+// ========== 打开手动添加弹窗 ==========
+function openAddModal() {
+  // 填充下拉选择
+  const select = document.getElementById('addTargetSelect');
+  select.innerHTML = '<option value="new">➕ 新建任务</option>';
+  state.tasks.forEach(t => {
+    select.innerHTML += `<option value="${t.id}">📋 ${t.name} (${t.contacts.length}个号码)</option>`;
+  });
+
+  // 监听选择变化，控制任务名称显示
+  select.onchange = () => {
+    const isNew = select.value === 'new';
+    document.getElementById('newTaskNameGroup').style.display = isNew ? 'block' : 'none';
+    if (isNew) document.getElementById('newTaskName').value = '';
+  };
+
+  document.getElementById('newTaskName').value = '';
+  document.getElementById('newTaskPhones').value = '';
+  document.getElementById('newTaskNameGroup').style.display = 'block';
+  openModal('addModal');
+}
+
+// ========== 手动添加号码 ==========
 function confirmAddTask() {
-  const name = document.getElementById('newTaskName').value.trim();
+  const targetId = document.getElementById('addTargetSelect').value;
   const raw = document.getElementById('newTaskPhones').value.trim();
 
-  if (!name) { showToast('请输入任务名称'); return; }
   if (!raw) { showToast('请输入至少一个号码'); return; }
 
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-  const contacts = [];
+  const newContacts = [];
   for (const line of lines) {
     const parts = line.split(/[,，\t]+/).map(s => s.trim());
     const phone = (parts.length > 1 ? parts[1] : parts[0]).replace(/[^\d+\-]/g, '');
     const namePart = parts.length > 1 ? parts[0] : '';
     if (!phone || !/^\d{5,}$/.test(phone)) continue;
-    contacts.push({ name: namePart, phone, status: 'pending', calledAt: null });
+    newContacts.push({ name: namePart, phone, status: 'pending', calledAt: null });
   }
 
-  if (!contacts.length) { showToast('未识别到有效号码'); return; }
+  if (!newContacts.length) { showToast('未识别到有效号码'); return; }
 
-  const task = {
-    id: genId(),
-    name,
-    contacts,
-    currentCall: null,
-    createdAt: new Date().toISOString()
-  };
+  if (targetId === 'new') {
+    // 新建任务
+    const name = document.getElementById('newTaskName').value.trim();
+    if (!name) { showToast('请输入任务名称'); return; }
 
-  state.tasks.push(task);
-  saveTasks();
-  closeModal('addModal');
-  document.getElementById('newTaskName').value = '';
-  document.getElementById('newTaskPhones').value = '';
-  render();
-  showToast(`任务「${name}」已创建 (${contacts.length}个号码)`);
+    const task = {
+      id: genId(),
+      name,
+      contacts: newContacts,
+      currentCall: null,
+      createdAt: new Date().toISOString()
+    };
+    state.tasks.push(task);
+    saveTasks();
+    closeModal('addModal');
+    document.getElementById('newTaskName').value = '';
+    document.getElementById('newTaskPhones').value = '';
+    render();
+    showToast(`任务「${name}」已创建 (${newContacts.length}个号码)`);
+  } else {
+    // 添加到现有任务
+    const task = state.tasks.find(t => t.id === targetId);
+    if (!task) { showToast('任务不存在'); return; }
+
+    task.contacts.push(...newContacts);
+    saveTasks();
+    closeModal('addModal');
+    document.getElementById('newTaskPhones').value = '';
+    render();
+    showToast(`已添加 ${newContacts.length} 个号码到「${task.name}」`);
+  }
 }
 
 // ========== 启动 ==========
