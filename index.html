@@ -13,6 +13,7 @@
     <div class="header-title">📞 拨号助手</div>
     <div class="header-actions">
       <button class="btn btn-secondary" id="importBtn">📥 导入</button>
+      <button class="btn btn-primary" id="addTaskBtn">+ 手动添加号码</button>
     </div>
   </header>
 
@@ -27,10 +28,7 @@
   <!-- 主内容：任务列表 -->
   <main class="main" id="taskList"></main>
 
-  <!-- 底部添加按钮 -->
-  <div class="bottom-bar">
-    <button class="btn btn-primary btn-large" id="addTaskBtn">+ 新建任务</button>
-  </div>
+  <!-- 底部添加按钮已移到顶部 -->
 
   <!-- ========== 导入弹窗 ========== -->
   <div class="modal" id="importModal">
@@ -74,11 +72,17 @@
   <div class="modal" id="addModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>新建任务</h3>
+        <h3>手动添加号码</h3>
         <button class="modal-close" onclick="closeModal('addModal')">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
+          <label>添加到</label>
+          <select id="addTargetSelect">
+            <option value="new">➕ 新建任务</option>
+          </select>
+        </div>
+        <div class="form-group" id="newTaskNameGroup">
           <label>任务名称 <span class="required">*</span></label>
           <input type="text" id="newTaskName" placeholder="例如：4月外呼">
         </div>
@@ -89,7 +93,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('addModal')">取消</button>
-        <button class="btn btn-primary" id="confirmAddBtn">创建</button>
+        <button class="btn btn-primary" id="confirmAddBtn">添加</button>
       </div>
     </div>
   </div>
@@ -112,26 +116,12 @@
       <div class="detail-footer">
         <button class="btn btn-secondary" id="resetAllBtn">🔄 重置全部</button>
         <button class="btn btn-warning" id="exportCalledBtn">📋 导出已拨打</button>
+        <button class="btn btn-danger" id="createMissedTaskBtn">❌ 未接通创建新任务</button>
       </div>
     </div>
   </div>
 
-  <!-- ========== 拨打结果弹窗 ========== -->
-  <div class="modal" id="resultModal">
-    <div class="modal-content modal-small">
-      <div class="modal-header">
-        <h3>通话结果</h3>
-      </div>
-      <div class="modal-body" style="text-align:center;padding:24px 20px;">
-        <div class="result-phone" id="resultPhone">-</div>
-        <div class="result-hint">请选择本次通话结果</div>
-      </div>
-      <div class="result-btns">
-        <button class="btn btn-success btn-large" style="flex:1;" onclick="markResult('connected')">✅ 接通了</button>
-        <button class="btn btn-danger btn-large" style="flex:1;" onclick="markResult('missed')">❌ 未接通</button>
-      </div>
-    </div>
-  </div>
+  <!-- 拨打结果弹窗已移除，结果选择合并到任务卡片 -->
 
   <div class="toast" id="toast"></div>
 
