@@ -395,8 +395,8 @@ function handleFileChange(e) {
 }
 
 function parseCSVLine(line) {
-  const result = [], current = '';
-  let inQuotes = false;
+  const result = [];
+  let current = '', inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
@@ -468,16 +468,10 @@ function parseImportText(text, filename) {
 }
 
 function confirmImport() {
-  console.log('[confirmImport] 开始执行');
   try {
-    const taskNameEl = document.getElementById('importTaskName');
-    console.log('[confirmImport] taskNameEl:', taskNameEl);
-    if (!taskNameEl) { alert('页面加载异常，请刷新重试'); return; }
-    const taskName = taskNameEl.value.trim();
-    console.log('[confirmImport] taskName:', taskName);
+    const taskName = (document.getElementById('importTaskName').value || '').trim();
     if (!taskName) { showToast('请输入任务名称'); return; }
     const contacts = state._importContacts;
-    console.log('[confirmImport] contacts:', contacts, 'length:', contacts ? contacts.length : 'null/undefined');
     if (!contacts || !contacts.length) { showToast('没有可导入的号码，请先上传文件'); return; }
 
     const task = {
@@ -487,12 +481,10 @@ function confirmImport() {
       currentCall: null,
       createdAt: new Date().toISOString()
     };
-    console.log('[confirmImport] task创建成功:', task.name, task.contacts.length);
 
     state.tasks.push(task);
     state._importContacts = null;
     saveTasks();
-    console.log('[confirmImport] saveTasks完成');
     closeModal('importModal');
     render();
     showToast(`任务「${taskName}」已创建 (${contacts.length}个号码)`);
