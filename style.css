@@ -46,12 +46,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica
 /* 当前拨打显示 */
 .current-call { background: #E8F4FF; border-top: 1px solid #C8E0FF; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
 .current-call-icon { font-size: 22px; }
-.current-call-info { flex: 1; }
+.current-call-info { flex: 1; min-width: 0; }
 .current-call-name { font-size: 15px; font-weight: 600; color: var(--text); }
+.current-call-phone-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 .current-call-phone { font-size: 13px; color: var(--text2); }
+.btn-copy { background: #fff; border: 1px solid var(--primary); color: var(--primary); padding: 3px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.btn-copy:active { background: var(--primary); color: #fff; }
 
 /* 拨打按钮 */
-.dial-btn-area { padding: 0 16px 14px; }
+.dial-btn-area { padding: 8px 16px 18px; }
 .btn-dial { width: 100%; height: 52px; background: var(--success); color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
 .btn-dial:active { opacity: 0.8; }
 .btn-dial:disabled { background: var(--border); color: var(--text2); cursor: not-allowed; }
