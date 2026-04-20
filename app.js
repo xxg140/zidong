@@ -50,6 +50,35 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// 复制号码到剪贴板
+function copyPhone(phone) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(phone).then(() => {
+      showToast('📋 号码已复制');
+    }).catch(() => {
+      fallbackCopy(phone);
+    });
+  } else {
+    fallbackCopy(phone);
+  }
+}
+
+function fallbackCopy(text) {
+  const input = document.createElement('input');
+  input.value = text;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.select();
+  try {
+    document.execCommand('copy');
+    showToast('📋 号码已复制');
+  } catch(e) {
+    showToast('复制失败，请手动复制');
+  }
+  document.body.removeChild(input);
+}
+
 function openModal(id) {
   document.getElementById(id).classList.add('active');
 }
@@ -141,7 +170,10 @@ function renderTasks() {
         <div class="current-call-icon">📞</div>
         <div class="current-call-info">
           <div class="current-call-name">${current.name || '未知'}</div>
-          <div class="current-call-phone">${current.phone}</div>
+          <div class="current-call-phone-row">
+            <span class="current-call-phone">${current.phone}</span>
+            <button class="btn-copy" onclick="copyPhone('${current.phone}')">📋 复制</button>
+          </div>
         </div>
         ${isWaitingResult ? '<div style="font-size:12px;color:var(--warning);background:#FFF3E0;padding:4px 10px;border-radius:8px;">等待结果</div>' : '<div style="font-size:12px;color:var(--success);background:#E8F5E9;padding:4px 10px;border-radius:8px;">正在拨打</div>'}
       </div>` : '';
