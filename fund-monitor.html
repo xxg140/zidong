@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<!-- v13 2026-04-22 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>基金持仓监控</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #f1f5f9; color: #1e293b; min-height: 100vh;
+  }
+
+  /* 头部 - 高级渐变 */
+  .header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e293b 100%);
+    padding: 22px 20px 18px; color: white;
+    position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: ''; position: absolute; top: -60%; right: -10%;
+    width: 280px; height: 280px; background: rgba(255,255,255,0.04);
+    border-radius: 50%; pointer-events: none;
+  }
+  .header::after {
+    content: ''; position: absolute; bottom: -40%; left: -5%;
+    width: 200px; height: 200px; background: rgba(59,130,246,0.08);
+    border-radius: 50%; pointer-events: none;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.3px; }
+  .header .update-time { font-size: 12px; opacity: 0.7; font-weight: 400; }
+
+  /* ===== 指数栏 ===== */
+  .index-bar {
+    background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);
+    padding: 12px 16px; border-bottom: 1px solid rgba(226,232,240,0.8);
+    display: flex; gap: 10px; align-items: center; overflow-x: auto;
+  }
+  #indexCards { display: flex; gap: 10px; flex: 1; align-items: center; }
+  .index-card {
+    flex: 1; min-width: 110px; max-width: 160px;
+    background: white; border-radius: 12px; padding: 12px 14px;
+    text-align: center; cursor: pointer;
+    border: 2px solid transparent;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
+  }
+  .index-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+  .index-card:active { transform: translateY(0) scale(0.98); }
+  .index-card.up { border-color: #ef4444; }
+  .index-card.down { border-color: #22c55e; }
+  .index-name { font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+  .index-value { font-size: 18px; font-weight: 700; color: #0f172a; }
+  .index-change { font-size: 14px; margin-top: 4px; font-weight: 600; }
+  .index-change.up { color: #ef4444; } .index-change.down { color: #22c55e; }
+
+  /* 汇总栏 */
+  .summary-bar {
+    background: white; padding: 14px 16px; display: flex;
+    gap: 20px; flex-wrap: wrap; border-bottom: 1px solid #f1f5f9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .summary-item { min-width: 70px; }
+  .summary-item .label { font-size: 11px; color: #94a3b8; margin-bottom: 4px; font-weight: 500; letter-spacing: 0.5px; }
+  .summary-item .value { font-size: 20px; font-weight: 700; }
+  .value.up { color: #ef4444; } .value.down { color: #22c55e; } .value.flat { color: #0f172a; }
+
+  /* 分组标签栏 - 内联在操作区 */
+  .group-bar-inline {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    overflow-x: auto;
+  }
+  #groupTabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .group-tab {
+    padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+    border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;
+    line-height: 1.4;
+  }
+  .group-tab:hover { border-color: #cbd5e1; color: #475569; }
+  .group-tab.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white; border-color: transparent;
+    box-shadow: 0 1px 3px rgba(59,130,246,0.3);
+  }
+  .group-manage-btn {
+    padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+    border: 1px solid #e2e8f0; background: white; color: #94a3b8; flex-shrink: 0;
+  }
+  .group-manage-btn:hover { border-color: #cbd5e1; color: #475569; background: #f8fafc; }
+
+  /* 操作区域 */
+  .action-area {
+    background: white; padding: 12px 16px; border-bottom: 1px solid #f1f5f9;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .action-input {
+    border: 1px solid #e2e8f0; padding: 7px 12px; border-radius: 8px;
+    font-size: 14px; outline: none; background: #f8fafc;
+    transition: all 0.15s;
+  }
+  .action-input:focus { border-color: #3b82f6; background: white; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  .action-input::placeholder { color: #94a3b8; }
+  .action-input.code-input { width: 90px; }
+  .action-input.amount-input { width: 100px; }
+  .action-btn {
+    padding: 7px 14px; border: none; border-radius: 8px;
+    font-size: 13px; cursor: pointer; font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white; box-shadow: 0 1px 3px rgba(59,130,246,0.3);
+  }
+  .btn-primary:hover { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); transform: translateY(-1px); }
+  .btn-secondary { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+  .btn-secondary:hover { background: #e2e8f0; color: #475569; }
+  .btn-success { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
+  .btn-success:hover { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); transform: translateY(-1px); }
+  .btn-danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+  .btn-danger:hover { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); transform: translateY(-1px); }
+  .btn-active { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+
+  /* 更多下拉菜单 */
+  .more-wrap { position: relative; }
+  .more-dropdown {
+    position: absolute; top: 100%; left: 0; margin-top: 6px;
+    background: white; border-radius: 12px; min-width: 180px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08);
+    z-index: 100; display: none; overflow: hidden;
+    border: 1px solid #f1f5f9;
+  }
+  .more-dropdown.active { display: block; }
+  .more-item {
+    padding: 11px 18px; font-size: 13px; cursor: pointer;
+    border-bottom: 1px solid #f8fafc; color: #475569;
+    font-weight: 500; transition: all 0.1s;
+  }
+  .more-item:last-child { border-bottom: none; }
+  .more-item:hover { background: #f8fafc; color: #0f172a; }
+  .more-item.danger { color: #ef4444; }
+  .more-item.danger:hover { background: #fef2f2; }
+
+  /* 添加/批量面板 */
+  .add-panel, .batch-panel {
+    background: white; padding: 16px 18px; border-bottom: 1px solid #f1f5f9; display: none;
+    border-radius: 14px; margin: 10px 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  .add-panel.active, .batch-panel.active { display: block; }
+  .add-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .batch-textarea {
+    width: 100%; min-height: 80px; padding: 10px 12px; border: 1px solid #e2e8f0;
+    border-radius: 8px; font-size: 13px; font-family: monospace; resize: vertical;
+    background: #f8fafc; outline: none;
+  }
+  .batch-textarea:focus { border-color: #3b82f6; background: white; }
+  .batch-hint { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+
+  /* ===== 列表表头 ===== */
+  .list-header {
+    display: grid; gap: 0; padding: 0; margin: 0 16px;
+    font-size: 11px; color: #94a3b8; font-weight: 600;
+    border-bottom: 1px solid #f1f5f9;
+    user-select: none; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .list-header .lh-cell {
+    cursor: pointer; display: flex; align-items: center; gap: 4px;
+    padding: 12px 8px; position: relative;
+    overflow: hidden; white-space: nowrap;
+  }
+  .list-header .lh-cell:hover { color: #3b82f6; }
+  .list-header .lh-cell.dragging { opacity: 0.4; }
+  .list-header .lh-cell.drag-over { background: #eff6ff; }
+  .list-header .lh-sort::after {
+    content: '⇅'; font-size: 10px; color: #cbd5e1;
+  }
+  .list-header .lh-sort.asc::after { content: '↑'; color: #3b82f6; }
+  .list-header .lh-sort.desc::after { content: '↓'; color: #3b82f6; }
+  .list-header .lh-cell.align-right { justify-content: flex-end; }
+  .list-header .lh-cell.align-left { justify-content: flex-start; }
+  .list-header .lh-cell.align-center { justify-content: center; }
+
+  /* 列宽拖拽手柄 */
+  .resize-handle {
+    position: absolute; right: 0; top: 20%; bottom: 20%; width: 4px;
+    cursor: col-resize; z-index: 10;
+    background: transparent; transition: background 0.15s;
+  }
+  .resize-handle:hover, .resize-handle.resizing {
+    background: #3b82f6;
+  }
+
+  /* ===== 基金列表 ===== */
+  .fund-list { background: transparent; padding: 8px 0 24px; }
+
+  .fund-row {
+    background: white; margin: 6px 16px; border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+    overflow: hidden;
+    transition: box-shadow 0.25s ease, transform 0.2s ease;
+    border: 1px solid rgba(226,232,240,0.6);
+  }
+  .fund-row:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+    transform: translateY(-1px); border-color: #e2e8f0;
+  }
+  .fund-row.expanded {
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
+    transform: translateY(-2px); border-color: #cbd5e1;
+  }
+
+  .fund-main {
+    display: grid; gap: 0;
+    padding: 10px 0; align-items: center;
+    cursor: pointer;
+  }
+  .fund-main > div { padding: 0 10px; }
+
+  /* 名称区 */
+  .fm-name { display: flex; flex-direction: column; }
+  .fm-fundname {
+    font-weight: 600; font-size: 14px; color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .fm-fundcode { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+  .fm-date { font-size: 11px; color: #cbd5e1; margin-top: 2px; }
+  .updated-tag {
+    display: inline-block;
+    font-size: 10px;
+    color: #22c55e;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  /* 持有金额（名称下方显示） */
+  .fm-amount-val { font-weight: 700; font-size: 14px; color: #0f172a; margin-top: 1px; }
+
+  /* 收益率列（原市值列） */
+  .fm-rate { text-align: left; display: flex; flex-direction: column; justify-content: center; }
+  .fm-rate-val { font-weight: 700; font-size: 14px; }
+  .fm-rate-val.up { color: #ef4444; } .fm-rate-val.down { color: #22c55e; }
+
+  /* 当日收益 */
+  .fm-today { text-align: left; display: flex; flex-direction: column; justify-content: center; }
+  .fm-change { font-weight: 700; font-size: 14px; order: 2; margin-top: 1px; }
+  .fm-change.up { color: #ef4444; } .fm-change.down { color: #22c55e; }
+  .fm-profit { font-size: 14px; margin-top: 0; font-weight: 700; order: 1; }
+  .fm-profit.up { color: #ef4444; } .fm-profit.down { color: #22c55e; }
+
+  /* 持有收益 */
+  .fm-total { text-align: left; }
+  .fm-total-val { font-weight: 700; font-size: 14px; }
+  .fm-total-val.up { color: #ef4444; } .fm-total-val.down { color: #22c55e; }
+  .fm-total-rate { font-size: 14px; margin-top: 1px; font-weight: 700; }
+  .fm-total-rate.up { color: #ef4444; } .fm-total-rate.down { color: #22c55e; }
+
+  /* 整行涨跌变色（基金名称固定不变色） */
+  .fund-row.up .fm-amount-val { color: #ef4444; }
+  .fund-row.down .fm-amount-val { color: #22c55e; }
+
+  /* ===== 展开详情面板 ===== */
+  .fund-detail {
+    max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #f8fafc; border-top: 1px solid #f1f5f9;
+  }
+  .fund-row.expanded .fund-detail { max-height: 420px; }
+
+  .detail-inner { padding: 12px 14px; }
+  .detail-main {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .detail-row {
+    background: white; border-radius: 10px; padding: 8px 12px; margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .dr-label { font-size: 12px; color: #94a3b8; font-weight: 500; }
+  .trend-chart { width: 38%; height: 120px; border-radius: 10px; background: white; display: block; flex-shrink: 0; }
+  .chart-tabs-wrap { padding: 8px 14px; border-top: 1px solid #f1f5f9; background: #f8fafc; }
+  .chart-tabs-inline { display: flex; justify-content: space-between; align-items: center; padding: 0 0 8px; gap: 8px; }
+  .chart-tabs { display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; }
+  .action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-action { flex: 1; padding: 6px 0; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; color: #475569; cursor: pointer; font-weight: 500; min-width: 56px; transition: all 0.15s; }
+  .btn-action:hover { border-color: #cbd5e1; background: #f8fafc; }
+  .btn-action.active { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-color: transparent; box-shadow: 0 1px 3px rgba(59,130,246,0.3); }
+  .action-panel { padding: 8px 0 0; }
+  .chart-tab { padding: 3px 10px; font-size: 11px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; color: #64748b; cursor: pointer; line-height: 1.4; font-weight: 500; transition: all 0.15s; }
+  .chart-tab:hover { border-color: #cbd5e1; color: #475569; }
+  .chart-tab.active { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-color: transparent; box-shadow: 0 1px 3px rgba(59,130,246,0.3); }
+
+  /* 展开面板底部信息行 */
+  .detail-info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 14px;
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+  .detail-info-left {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .detail-info-code {
+    font-weight: 600;
+    color: #64748b;
+  }
+  .detail-info-time {
+    color: #94a3b8;
+  }
+
+  /* 指数参考 */
+  .index-ref { background: #f8fafc; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; border: 1px solid #e2e8f0; }
+  .index-ref.warning { background: #fef2f2; border-color: #fecaca; }
+  .index-ref-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px; }
+  .index-ref-row { display: flex; gap: 16px; font-size: 13px; color: #475569; flex-wrap: wrap; }
+  .index-diff { font-weight: 600; color: #0f172a; }
+  .index-warning { margin-top: 6px; font-size: 12px; color: #ef4444; font-weight: 500; }
+
+  .detail-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: white;
+    border-radius: 10px;
+    padding: 10px 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    min-width: 0;
+  }
+  .group-select { padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; background: #f8fafc; outline: none; cursor: pointer; }
+  .group-select:focus { border-color: #3b82f6; background: white; }
+  .hold-info { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .dr-value { font-size: 15px; font-weight: 600; }
+  .dr-value.up { color: #ef4444; } .dr-value.down { color: #22c55e; }
+  .dr-value.pending { color: #94a3b8; }
+
+  .edit-group { display: flex; gap: 6px; margin-top: 4px; }
+  .edit-group input {
+    width: 80px; padding: 4px 8px; border: 1px solid #e2e8f0;
+    border-radius: 6px; font-size: 12px; background: #f8fafc;
+    outline: none; transition: all 0.15s;
+  }
+  .edit-group input:focus { border-color: #3b82f6; background: white; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  .btn-edit {
+    padding: 4px 10px; font-size: 11px; border: none; border-radius: 6px;
+    cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white; font-weight: 500; box-shadow: 0 1px 2px rgba(59,130,246,0.25);
+    transition: all 0.15s;
+  }
+  .btn-edit:hover { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); transform: translateY(-1px); }
+
+  .detail-edit-row { display: flex; gap: 10px; }
+  .detail-edit-col { flex: 1; }
+
+  /* 分组选择下拉框 */
+  .group-select {
+    padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px;
+    font-size: 12px; background: #f8fafc; color: #0f172a; outline: none; min-width: 100px;
+  }
+  .group-select:focus { border-color: #3b82f6; background: white; }
+
+  /* 分组管理弹窗 */
+  .group-list-item {
+    display: flex; align-items: center; gap: 8px; padding: 10px 0;
+    border-bottom: 1px solid #f8fafc;
+  }
+  .group-list-item:last-child { border-bottom: none; }
+  .group-list-name {
+    flex: 1; font-size: 14px; color: #0f172a; font-weight: 500;
+    background: transparent; border: none; outline: none;
+  }
+  .group-list-name:focus { background: #f8fafc; border-radius: 4px; padding: 2px 6px; }
+  .group-list-del {
+    padding: 4px 10px; font-size: 12px; border: none; border-radius: 6px;
+    cursor: pointer; background: #fef2f2; color: #ef4444; font-weight: 500;
+  }
+  .group-list-del:hover { background: #fecaca; }
+  .group-add-row {
+    display: flex; gap: 8px; align-items: center; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .ops-row { display: flex; gap: 6px; margin-top: 0; flex-wrap: wrap; align-items: center; }
+  .op-input {
+    width: 50px; padding: 4px 8px; border: 1px solid #e2e8f0;
+    border-radius: 6px; font-size: 12px; background: #f8fafc; outline: none;
+  }
+  .op-input:focus { border-color: #3b82f6; background: white; }
+  .btn-op {
+    padding: 4px 12px; font-size: 12px; border: none; border-radius: 6px;
+    cursor: pointer; font-weight: 500; transition: all 0.15s;
+  }
+  .btn-op:hover { transform: translateY(-1px); }
+  .btn-op-add { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 1px 2px rgba(59,130,246,0.25); }
+  .btn-op-minus { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; box-shadow: 0 1px 2px rgba(245,158,11,0.25); }
+  .btn-op-del { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; box-shadow: 0 1px 2px rgba(239,68,68,0.25); }
+  .btn-op-del.plain { background: none; color: #94a3b8; border: none; box-shadow: none; padding: 4px 8px; }
+
+  /* ===== 弹窗通用 ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(15,23,42,0.55);
+    display: none; align-items: center; justify-content: center; z-index: 2000;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: white; border-radius: 16px; width: 90%; max-width: 420px;
+    max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.1);
+  }
+  .modal-header {
+    padding: 16px 20px; border-bottom: 1px solid #f1f5f9;
+    font-size: 16px; font-weight: 600; display: flex; color: #0f172a;
+    justify-content: space-between; align-items: center;
+  }
+  .modal-close { font-size: 22px; color: #94a3b8; cursor: pointer; background: none; border: none; transition: color 0.15s; }
+  .modal-close:hover { color: #0f172a; }
+  .modal-body { padding: 16px 20px; overflow-y: auto; }
+  .modal-footer {
+    padding: 12px 20px; border-top: 1px solid #f1f5f9;
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+
+  /* 指数选择 */
+  .index-option {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid #f8fafc; cursor: pointer;
+    transition: all 0.1s;
+  }
+  .index-option:last-child { border-bottom: none; }
+  .index-option input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6; }
+  .index-option .io-name { font-size: 14px; flex: 1; color: #0f172a; font-weight: 500; }
+  .index-option .io-code { font-size: 12px; color: #94a3b8; }
+
+  /* 空状态 */
+  .empty-state { text-align: center; padding: 80px 20px; color: #94a3b8; }
+  .empty-state .icon { font-size: 56px; margin-bottom: 16px; opacity: 0.6; }
+  .empty-state .text { font-size: 15px; font-weight: 500; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #0f172a; color: white; padding: 12px 24px; border-radius: 10px;
+    font-size: 13px; font-weight: 500; z-index: 1000; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+  .toast.success { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+  .toast.warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+
+  @media (max-width: 600px) {
+    /* 头部 */
+    .header { padding: 16px 14px 14px; }
+    .header h1 { font-size: 18px; }
+
+    /* 指数栏 */
+    .index-bar { padding: 10px 12px; }
+    .index-card { min-width: 90px; padding: 10px 8px; border-radius: 10px; }
+    .index-name { font-size: 10px; margin-bottom: 4px; }
+    .index-value { font-size: 15px; }
+    .index-change { font-size: 12px; margin-top: 2px; }
+
+    /* 汇总栏 */
+    .summary-bar { padding: 10px 12px; gap: 14px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .summary-item { min-width: 60px; flex-shrink: 0; }
+    .summary-item .label { font-size: 10px; }
+    .summary-item .value { font-size: 16px; }
+
+    /* 操作区 */
+    .action-area { padding: 10px 12px; }
+    .action-btn { padding: 8px 14px; font-size: 14px; min-height: 38px; }
+    .group-tab { padding: 8px 14px; font-size: 14px; min-height: 38px; }
+
+    /* 添加/批量面板 */
+    .add-panel, .batch-panel { margin: 8px 12px; padding: 12px 14px; }
+    .action-input { padding: 10px 12px; font-size: 16px; /* 16px防止iOS缩放 */ }
+    .action-input.code-input { width: 100px; }
+    .action-input.amount-input { width: 110px; }
+
+    /* 列表 - 手机端强制适配列宽 */
+    .list-header { margin: 0 12px; font-size: 10px; grid-template-columns: 2fr 1.2fr 1fr 1fr 0.4fr !important; }
+    .list-header .lh-cell { padding: 10px 6px; }
+    .fund-list { padding: 6px 0 20px; }
+    .fund-row { margin: 5px 10px; border-radius: 12px; }
+    .fund-main { padding: 9px 0; grid-template-columns: 2fr 1.2fr 1fr 1fr 0.4fr !important; }
+    .fund-main > div { padding: 0 8px; }
+    .fm-fundname { font-size: 13px; }
+    .fm-amount-val { font-size: 13px; }
+    .fm-change, .fm-profit, .fm-total-val, .fm-total-rate, .fm-rate-val { font-size: 13px; }
+
+    /* 展开面板 - 纵向堆叠 */
+    .fund-row.expanded .fund-detail { max-height: 700px; }
+    .detail-main { flex-direction: column; gap: 10px; }
+    .trend-chart { width: 100%; height: 160px; }
+    .detail-controls { padding: 12px 14px; }
+    .chart-tabs-inline { padding: 0 0 10px; }
+    .action-btns { gap: 6px; }
+    .btn-action { padding: 10px 0; font-size: 13px; }
+    .action-panel .ops-row { display: flex; gap: 6px; }
+    .action-panel .ops-row .op-input { flex: 1; min-width: 60px; padding: 8px 10px; font-size: 16px; }
+    .action-panel .ops-row .btn-op { flex: 1; min-height: 36px; padding: 8px 10px; font-size: 13px; }
+    .action-panel .edit-group { display: flex; gap: 6px; }
+    .action-panel .edit-group input { flex: 1; padding: 8px 10px; font-size: 16px; }
+    .action-panel .btn-edit { padding: 8px 14px; font-size: 13px; }
+    .action-panel .group-select { font-size: 16px; padding: 8px 10px; width: 100%; }
+    .detail-info-bar { padding: 8px 14px; font-size: 13px; }
+
+    /* 弹窗 */
+    .modal-box { width: 92%; max-width: none; border-radius: 14px; }
+    .modal-header { padding: 14px 16px; font-size: 15px; }
+    .modal-body { padding: 14px 16px; }
+    .modal-footer { padding: 10px 16px; }
+
+    /* Toast */
+    .toast { bottom: 20px; padding: 10px 20px; font-size: 14px; width: 90%; text-align: center; }
+
+    /* 底部安全区 */
+    body { padding-bottom: env(safe-area-inset-bottom, 0); }
+  }
+
+  /* ===== 深色模式 ===== */
+  body.dark {
+    background: #0f172a; color: #e2e8f0;
+  }
+  body.dark .index-bar {
+    background: rgba(30,41,59,0.8); border-bottom-color: rgba(51,65,85,0.8);
+  }
+  body.dark .index-card {
+    background: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  body.dark .index-name { color: #94a3b8; }
+  body.dark .index-value { color: #f1f5f9; }
+  body.dark .summary-bar {
+    background: #1e293b; border-bottom-color: #334155;
+  }
+  body.dark .summary-item .label { color: #94a3b8; }
+  body.dark .value.flat { color: #f1f5f9; }
+  body.dark .action-area {
+    background: #1e293b; border-bottom-color: #334155;
+  }
+  body.dark .group-tab {
+    background: #1e293b; border-color: #475569; color: #94a3b8;
+  }
+  body.dark .group-tab:hover { border-color: #64748b; color: #e2e8f0; }
+  body.dark .group-manage-btn {
+    background: #1e293b; border-color: #475569; color: #94a3b8;
+  }
+  body.dark .group-manage-btn:hover { background: #334155; color: #e2e8f0; border-color: #64748b; }
+  body.dark .action-input {
+    background: #1e293b; border-color: #475569; color: #f1f5f9;
+  }
+  body.dark .action-input:focus { background: #334155; border-color: #3b82f6; }
+  body.dark .action-input::placeholder { color: #64748b; }
+  body.dark .btn-secondary { background: #334155; color: #94a3b8; border-color: #475569; }
+  body.dark .btn-secondary:hover { background: #475569; color: #e2e8f0; }
+  body.dark .more-dropdown {
+    background: #1e293b; border-color: #334155;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+  body.dark .more-item { color: #cbd5e1; border-bottom-color: #334155; }
+  body.dark .more-item:hover { background: #334155; color: #f1f5f9; }
+  body.dark .more-item.danger:hover { background: rgba(239,68,68,0.15); }
+  body.dark .add-panel, body.dark .batch-panel {
+    background: #1e293b; border-bottom-color: #334155;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  body.dark .batch-textarea {
+    background: #0f172a; border-color: #475569; color: #f1f5f9;
+  }
+  body.dark .batch-textarea:focus { border-color: #3b82f6; background: #1e293b; }
+  body.dark .batch-hint { color: #64748b; }
+  body.dark .list-header { border-bottom-color: #334155; color: #64748b; }
+  body.dark .list-header .lh-cell:hover { color: #60a5fa; }
+  body.dark .list-header .lh-sort::after { color: #475569; }
+  body.dark .list-header .lh-sort.asc::after,
+  body.dark .list-header .lh-sort.desc::after { color: #60a5fa; }
+  body.dark .list-header .lh-cell.drag-over { background: rgba(59,130,246,0.15); }
+  body.dark .fund-list { background: transparent; }
+  body.dark .fund-row {
+    background: #1e293b; border-color: #334155;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  body.dark .fund-row:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3); border-color: #475569;
+  }
+  body.dark .fund-row.expanded {
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4); border-color: #475569;
+  }
+  body.dark .fm-fundname { color: #f1f5f9; }
+  body.dark .fm-amount-val { color: #f1f5f9; }
+  body.dark .fund-row.up .fm-amount-val { color: #ef4444; }
+  body.dark .fund-row.down .fm-amount-val { color: #22c55e; }
+  body.dark .updated-tag {
+    color: #4ade80; background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.3);
+  }
+  body.dark .fund-detail {
+    background: #162032; border-top-color: #334155;
+  }
+  body.dark .detail-row {
+    background: #1e293b; box-shadow: none;
+  }
+  body.dark .dr-label { color: #64748b; }
+  body.dark .trend-chart { background: #1e293b; }
+  body.dark .chart-tabs-wrap { background: #162032; border-top-color: #334155; }
+  body.dark .chart-tab {
+    background: #1e293b; border-color: #475569; color: #94a3b8;
+  }
+  body.dark .chart-tab:hover { border-color: #64748b; color: #e2e8f0; }
+  body.dark .btn-action {
+    background: #1e293b; border-color: #475569; color: #94a3b8;
+  }
+  body.dark .btn-action:hover { background: #334155; border-color: #64748b; }
+  body.dark .detail-controls {
+    background: #1e293b; box-shadow: none;
+  }
+  body.dark .group-select {
+    background: #0f172a; border-color: #475569; color: #f1f5f9;
+  }
+  body.dark .group-select:focus { background: #1e293b; border-color: #3b82f6; }
+  body.dark .edit-group input {
+    background: #0f172a; border-color: #475569; color: #f1f5f9;
+  }
+  body.dark .edit-group input:focus { background: #1e293b; border-color: #3b82f6; }
+  body.dark .op-input {
+    background: #0f172a; border-color: #475569; color: #f1f5f9;
+  }
+  body.dark .op-input:focus { background: #1e293b; border-color: #3b82f6; }
+  body.dark .btn-op-del.plain { color: #64748b; }
+  body.dark .detail-info-bar {
+    background: #162032; border-top-color: #334155; color: #64748b;
+  }
+  body.dark .detail-info-code { color: #94a3b8; }
+  body.dark .detail-info-time { color: #64748b; }
+  body.dark .index-ref {
+    background: #1e293b; border-color: #334155;
+  }
+  body.dark .index-ref.warning { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
+  body.dark .index-ref-title { color: #94a3b8; }
+  body.dark .index-ref-row { color: #cbd5e1; }
+  body.dark .index-diff { color: #f1f5f9; }
+  body.dark .modal-overlay { background: rgba(0,0,0,0.7); }
+  body.dark .modal-box {
+    background: #1e293b; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  body.dark .modal-header { border-bottom-color: #334155; color: #f1f5f9; }
+  body.dark .modal-close { color: #64748b; }
+  body.dark .modal-close:hover { color: #f1f5f9; }
+  body.dark .modal-body { background: #1e293b; }
+  body.dark .modal-footer { border-top-color: #334155; }
+  body.dark .index-option { border-bottom-color: #334155; }
+  body.dark .index-option .io-name { color: #f1f5f9; }
+  body.dark .index-option .io-code { color: #64748b; }
+  body.dark .group-list-item { border-bottom-color: #334155; }
+  body.dark .group-list-name { color: #f1f5f9; }
+  body.dark .group-list-name:focus { background: #334155; }
+  body.dark .group-list-del { background: rgba(239,68,68,0.15); color: #f87171; }
+  body.dark .group-list-del:hover { background: rgba(239,68,68,0.25); }
+  body.dark .group-add-row { border-top-color: #334155; }
+  body.dark .empty-state { color: #64748b; }
+  body.dark .toast { background: #334155; }
+  body.dark .fm-change.up, body.dark .fm-profit.up, body.dark .fm-rate-val.up,
+  body.dark .fm-total-val.up, body.dark .fm-total-rate.up { color: #f87171; }
+  body.dark .fm-change.down, body.dark .fm-profit.down, body.dark .fm-rate-val.down,
+  body.dark .fm-total-val.down, body.dark .fm-total-rate.down { color: #4ade80; }
+
+  /* 深色模式切换按钮 */
+  .theme-toggle {
+    position: absolute; top: 50%; right: 16px; transform: translateY(-50%);
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px; padding: 4px 12px; cursor: pointer;
+    font-size: 14px; color: white; transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  body.dark .theme-toggle {
+    background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15);
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,0.25); }
+
+
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 基金持仓监控</h1>
+  <div class="update-time" id="updateTime">等待刷新...</div>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙</button>
+</div>
+
+<!-- 指数栏 -->
+<div class="index-bar" id="indexBar">
+  <div id="indexCards"></div>
+</div>
+
+<!-- 汇总栏 -->
+<div class="summary-bar" id="summaryBar" style="display:none;">
+  <div class="summary-item"><div class="label">持有</div><div class="value flat" id="sumCount">0</div></div>
+  <div class="summary-item"><div class="label">总市值</div><div class="value flat" id="sumInvest">0</div></div>
+  <div class="summary-item"><div class="label">今日盈亏</div><div class="value" id="sumProfitToday">0</div></div>
+  <div class="summary-item"><div class="label">持有总收益</div><div class="value" id="sumProfitTotal">0</div></div>
+  <div class="summary-item"><div class="label">总收益率</div><div class="value" id="sumProfitRate">0%</div></div>
+</div>
+
+<!-- 操作区域 + 分组标签栏合并 -->
+<div class="action-area">
+  <div class="group-bar-inline" id="groupBar" style="display:none;">
+    <div id="groupTabs"></div>
+  </div>
+  <div class="more-wrap">
+    <button class="action-btn btn-secondary" onclick="toggleMoreMenu()" id="moreBtn">更多</button>
+    <div class="more-dropdown" id="moreDropdown">
+      <div class="more-item" onclick="openAddPanel();closeMoreMenu();">➕ 单个添加</div>
+      <div class="more-item" onclick="openBatchPanel();closeMoreMenu();">📥 批量导入</div>
+      <div class="more-item" onclick="toggleAutoRefresh();closeMoreMenu();" id="moreAutoRefreshItem">⏱ 自动刷新</div>
+      <div class="more-item" onclick="switchDataSource();closeMoreMenu();" id="moreDataSourceItem">📡 数据源：数据源1</div>
+      <div class="more-item" onclick="resetLayout();closeMoreMenu();">↺ 恢复默认布局</div>
+      <div class="more-item" onclick="openGroupModal();closeMoreMenu();">📁 管理分组</div>
+      <div class="more-item danger" onclick="clearAllFunds();closeMoreMenu();">🗑 清空</div>
+    </div>
+  </div>
+  <button class="action-btn btn-secondary" onclick="refreshAll()">🔄 刷新</button>
+</div>
+
+<!-- 单个添加面板 -->
+<div class="add-panel" id="addPanel">
+  <div class="add-row">
+    <input type="text" class="action-input code-input" id="addCode" placeholder="基金代码" maxlength="6" />
+    <input type="number" class="action-input amount-input" id="addAmount" placeholder="投入金额" step="0.01" min="0" />
+    <input type="number" class="action-input amount-input" id="addProfit" placeholder="持有收益" step="0.01" />
+    <button class="action-btn btn-primary" onclick="submitAddFund()">添加</button>
+    <button class="action-btn btn-secondary" onclick="closeAddPanel()">取消</button>
+  </div>
+</div>
+
+<!-- 批量导入 -->
+<div class="batch-panel" id="batchPanel">
+  <textarea class="batch-textarea" id="batchInput" placeholder="格式：基金代码 金额 持有收益（每行一个）
+000001 10000 500
+000002 5000 -200
+
+或只写代码和金额：
+000001 10000"></textarea>
+  <div class="batch-hint">格式：<code>基金代码 金额 收益</code> 或 <code>基金代码 金额</code>（收益默认未校准）</div>
+  <div style="display:flex;gap:8px;margin-top:8px;">
+    <button class="action-btn btn-success" onclick="importBatchFunds()">确认导入</button>
+    <button class="action-btn btn-secondary" onclick="closeBatchPanel()">取消</button>
+  </div>
+</div>
+
+<!-- 基金列表 -->
+<div id="fundListArea">
+  <div class="list-header" id="listHeader" style="display:none;"></div>
+  <div class="fund-list" id="fundList"></div>
+</div>
+
+<!-- 指数选择弹窗 -->
+<div class="modal-overlay" id="indexModal" onclick="if(event.target===this)closeIndexModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>选择显示的指数（最多3个）</span>
+      <button class="modal-close" onclick="closeIndexModal()">×</button>
+    </div>
+    <div class="modal-body" id="indexOptions"></div>
+    <div class="modal-footer">
+      <button class="action-btn btn-secondary" onclick="closeIndexModal()">取消</button>
+      <button class="action-btn btn-primary" onclick="saveIndexSelection()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 确认弹窗 -->
+<div class="modal-overlay" id="confirmModal" onclick="if(event.target===this)closeConfirmModal()">
+  <div class="modal-box" style="max-width:320px;">
+    <div class="modal-header">
+      <span id="confirmTitle">确认操作</span>
+      <button class="modal-close" onclick="closeConfirmModal()">×</button>
+    </div>
+    <div class="modal-body" id="confirmBody" style="font-size:14px;color:#666;"></div>
+    <div class="modal-footer">
+      <button class="action-btn btn-secondary" onclick="closeConfirmModal()">取消</button>
+      <button class="action-btn btn-danger" id="confirmBtn" onclick="executeConfirm()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 分组管理弹窗 -->
+<div class="modal-overlay" id="groupModal" onclick="if(event.target===this)closeGroupModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>管理分组</span>
+      <button class="modal-close" onclick="closeGroupModal()">×</button>
+    </div>
+    <div class="modal-body" id="groupModalBody"></div>
+    <div class="modal-footer">
+      <button class="action-btn btn-secondary" onclick="closeGroupModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 深色模式 ============
+function loadTheme() {
+  const saved = localStorage.getItem('fund_monitor_theme');
+  if (saved === 'dark') {
+    document.body.classList.add('dark');
+    updateThemeIcon();
+  } else if (saved === 'light') {
+    document.body.classList.remove('dark');
+    updateThemeIcon();
+  } else {
+    // 跟随系统偏好
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.body.classList.add('dark');
+    }
+    updateThemeIcon();
+  }
+}
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  localStorage.setItem('fund_monitor_theme', isDark ? 'dark' : 'light');
+  updateThemeIcon();
+}
+function updateThemeIcon() {
+  const btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+}
+loadTheme();
+
+// ============ 列配置 ============
+const defaultColumns = [
+  { field: 'name', title: '基金名称', width: 360, align: 'left', sortable: true },
+  { field: 'gszzl', title: '当日估值', width: 200, align: 'left', sortable: true },
+  { field: 'amount', title: '收益率', width: 200, align: 'left', sortable: true },
+  { field: 'profit', title: '持有收益', width: 200, align: 'left', sortable: true },
+  { field: '_arrow', title: '', width: 80, align: 'center', sortable: false }
+];
+let columns = JSON.parse(JSON.stringify(defaultColumns));
+
+function loadColumns() {
+  try {
+    const s = localStorage.getItem('fund_monitor_columns');
+    if (s) {
+      const saved = JSON.parse(s);
+      // 检查是否需要重置：如果列数或字段不匹配，强制用默认配置
+      const fieldsMatch = saved.length === defaultColumns.length &&
+        saved.every((col, i) => col.field === defaultColumns[i].field);
+      if (!fieldsMatch) {
+        // 列结构变化，重置为默认
+        columns = JSON.parse(JSON.stringify(defaultColumns));
+        saveColumns();
+        return;
+      }
+      // 强制同步标题和对齐方式
+      saved.forEach(col => {
+        const def = defaultColumns.find(c => c.field === col.field);
+        if (def) {
+          col.align = def.align;
+          col.title = def.title;
+        }
+      });
+      columns = saved;
+    }
+  } catch(e) {
+    columns = JSON.parse(JSON.stringify(defaultColumns));
+  }
+}
+function saveColumns() {
+  try { localStorage.setItem('fund_monitor_columns', JSON.stringify(columns)); } catch(e) {}
+}
+function getGridTemplate() {
+  return columns.map(c => c.width + 'px').join(' ');
+}
+
+// ============ 数据 ============
+let funds = [];
+let expandedCode = null;
+let autoRefreshTimer = null;
+let isAutoRefresh = true;
+let sortField = 'gszzl';
+let sortDir = -1;
+let confirmCallback = null;
+
+// ============ 分组 ============
+let groups = ['全部'];
+let activeGroup = '全部';
+const GROUP_STORAGE_KEY = 'fund_monitor_groups';
+const ACTIVE_GROUP_KEY = 'fund_monitor_active_group';
+
+function loadGroups() {
+  try {
+    const g = localStorage.getItem(GROUP_STORAGE_KEY);
+    if (g) groups = JSON.parse(g);
+    const a = localStorage.getItem(ACTIVE_GROUP_KEY);
+    if (a) activeGroup = a;
+  } catch(e) {}
+}
+function saveGroups() {
+  try { localStorage.setItem(GROUP_STORAGE_KEY, JSON.stringify(groups)); } catch(e) {}
+}
+function saveActiveGroup() {
+  try { localStorage.setItem(ACTIVE_GROUP_KEY, activeGroup); } catch(e) {}
+}
+function getGroupFunds() {
+  if (activeGroup === groups[0]) return funds.filter(f => !f.group || f.group === groups[0]);
+  return funds.filter(f => f.group === activeGroup);
+}
+function setFundGroup(code, groupName) {
+  const f = funds.find(x => x.code === code);
+  if (!f) return;
+  f.group = groupName;
+  saveFunds();
+  renderFunds();
+  showToast(`已移动到「${groupName}」`, 'success');
+}
+function renderGroupTabs() {
+  const bar = document.getElementById('groupBar');
+  const container = document.getElementById('groupTabs');
+  if (!groups.length || groups.length === 1) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  let html = '';
+  groups.forEach(g => {
+    const active = g === activeGroup ? 'active' : '';
+    const count = g === groups[0] ? funds.length : funds.filter(f => f.group === g).length;
+    html += `<div class="group-tab ${active}" onclick="switchGroup('${g}')">${g} (${count})</div>`;
+  });
+  container.innerHTML = html;
+}
+function switchGroup(name) {
+  activeGroup = name;
+  saveActiveGroup();
+  renderFunds();
+}
+function openGroupModal() {
+  renderGroupModal();
+  document.getElementById('groupModal').classList.add('active');
+}
+function closeGroupModal() {
+  document.getElementById('groupModal').classList.remove('active');
+}
+function renderGroupModal() {
+  const body = document.getElementById('groupModalBody');
+  let html = '';
+  groups.forEach((g, idx) => {
+    const isAll = idx === 0;
+    const count = isAll ? funds.filter(f => !f.group || f.group === groups[0]).length : funds.filter(f => f.group === g).length;
+    html += `<div class="group-list-item">
+      <input type="text" class="group-list-name" value="${g}" onchange="renameGroup(${idx},this.value)" onclick="event.stopPropagation()">
+      <span style="font-size:12px;color:#94a3b8;white-space:nowrap;">${count}只</span>
+      ${isAll?'<span style="font-size:12px;color:#cbd5e1;">默认</span>':'<button class="group-list-del" onclick="deleteGroup(\''+g+'\')">删除</button>'}
+    </div>`;
+  });
+  html += `<div class="group-add-row">
+    <input type="text" class="action-input" id="newGroupName" placeholder="新分组名称" style="flex:1;" onclick="event.stopPropagation()">
+    <button class="action-btn btn-primary" onclick="addGroup()">添加</button>
+  </div>`;
+  body.innerHTML = html;
+}
+function addGroup() {
+  const input = document.getElementById('newGroupName');
+  const name = input.value.trim();
+  if (!name) { showToast('请输入分组名称', 'warning'); return; }
+  if (groups.includes(name)) { showToast('分组已存在', 'warning'); return; }
+  groups.push(name);
+  saveGroups();
+  renderGroupModal();
+  renderGroupTabs();
+  input.value = '';
+  showToast('分组已添加', 'success');
+}
+function renameGroup(idx, newName) {
+  newName = newName.trim();
+  if (!newName) { showToast('名称不能为空', 'warning'); renderGroupModal(); return; }
+  if (groups.includes(newName)) { showToast('名称已存在', 'warning'); renderGroupModal(); return; }
+  const oldName = groups[idx];
+  const isAll = idx === 0;
+  groups[idx] = newName;
+  // 同步更新所有基金的 group 字段
+  if (isAll) {
+    funds.forEach(f => { if (!f.group || f.group === oldName) f.group = newName; });
+  } else {
+    funds.forEach(f => { if (f.group === oldName) f.group = newName; });
+  }
+  if (activeGroup === oldName) activeGroup = newName;
+  saveGroups();
+  saveActiveGroup();
+  saveFunds();
+  renderGroupModal();
+  renderGroupTabs();
+  renderFunds();
+  showToast('分组已重命名', 'success');
+}
+function deleteGroup(name) {
+  if (groups.length <= 1) { showToast('至少保留一个分组', 'warning'); return; }
+  const allName = groups[0];
+  showConfirm(`删除分组「${name}」？该分组下的基金将移入「${allName}」。`, () => {
+    groups = groups.filter(g => g !== name);
+    funds.forEach(f => { if (f.group === name) f.group = allName; });
+    if (activeGroup === name) activeGroup = allName;
+    saveGroups();
+    saveActiveGroup();
+    saveFunds();
+    renderGroupModal();
+    renderGroupTabs();
+    renderFunds();
+    showToast('分组已删除', 'success');
+  });
+}
+
+const allIndices = [
+  { code:'sh000001', name:'上证指数', tencent:'sh000001' },
+  { code:'sz399001', name:'深证成指', tencent:'sz399001' },
+  { code:'sz399006', name:'创业板指', tencent:'sz399006' },
+  { code:'sh000688', name:'科创50', tencent:'sh000688' },
+  { code:'sh000300', name:'沪深300', tencent:'sh000300' },
+  { code:'sh000016', name:'上证50', tencent:'sh000016' },
+  { code:'sz399905', name:'中证500', tencent:'sz399905' },
+  { code:'sh000852', name:'中证1000', tencent:'sh000852' },
+  { code:'hkHSI',    name:'恒生指数', tencent:'hkHSI' },
+  { code:'hkHSTECH', name:'恒生科技', tencent:'hkHSTECH' },
+  { code:'usIXIC',   name:'纳斯达克', tencent:'usIXIC' },
+  { code:'usDJI',    name:'道琼斯', tencent:'usDJI' },
+  { code:'usSPX',    name:'标普500', tencent:'usSPX' },
+];
+let selectedIndices = ['sh000001','sz399006','sh000688'];
+let indexDataCache = {};
+
+// ============ 持久化 ============
+function loadStorage() {
+  try {
+    const s1 = localStorage.getItem('fund_monitor_v3');
+    if (s1) {
+      funds = JSON.parse(s1);
+      funds.forEach(f => {
+        if (f.totalProfit === undefined) f.totalProfit = null;
+        if (f.calibrateTime === undefined) f.calibrateTime = null;
+        if (f.addDate === undefined) f.addDate = new Date().toISOString().slice(0,10);
+      });
+    }
+    const s2 = localStorage.getItem('fund_monitor_indices');
+    if (s2) selectedIndices = JSON.parse(s2);
+    loadGroups();
+  } catch(e){}
+}
+function saveFunds() {
+  try{ localStorage.setItem('fund_monitor_v3',JSON.stringify(funds)); }catch(e){}
+}
+function saveIndices() {
+  try{ localStorage.setItem('fund_monitor_indices',JSON.stringify(selectedIndices)); }catch(e){}
+}
+
+// ============ 更多菜单 ============
+function toggleMoreMenu() {
+  document.getElementById('moreDropdown').classList.toggle('active');
+}
+function closeMoreMenu() {
+  document.getElementById('moreDropdown').classList.remove('active');
+}
+
+// ============ 单个添加面板 ============
+function openAddPanel(){
+  document.getElementById('addPanel').classList.add('active');
+  document.getElementById('addCode').focus();
+}
+function closeAddPanel(){
+  document.getElementById('addPanel').classList.remove('active');
+  document.getElementById('addCode').value='';
+  document.getElementById('addAmount').value='';
+  document.getElementById('addProfit').value='';
+}
+function submitAddFund(){
+  const ci=document.getElementById('addCode'), ai=document.getElementById('addAmount'), pi=document.getElementById('addProfit');
+  const code=ci.value.trim(), amount=parseFloat(ai.value)||0, profit=parseFloat(pi.value);
+  let cleanCode=code.replace(/\D/g,'');
+  if(cleanCode.length===5) cleanCode='0'+cleanCode;
+  if(cleanCode.length<4||cleanCode.length>6){
+    showToast('请输入4-6位基金代码','error'); ci.focus(); ci.select(); return;
+  }
+  const ex=funds.find(f=>f.code===cleanCode);
+  if(ex){
+    if(amount>0){
+      showConfirm(`已存在 ${ex.name||cleanCode}，当前持有 ${formatMoney(ex.amount)}\n加仓 ${formatMoney(amount)}？`,()=>{
+        ex.amount+=amount; saveFunds(); renderFunds(); fetchFundData(cleanCode);
+        showToast('加仓成功','success'); closeAddPanel();
+      });
+    } else { showToast('该基金已在列表中','warning'); }
+    return;
+  }
+  funds.push({code:cleanCode,name:'',amount,dwjz:'0',gsz:'0',gszzl:'0',gztime:'',jzrq:'',
+               totalProfit:isNaN(profit)?null:profit,calibrateTime:null,addDate:new Date().toISOString().slice(0,10),
+               group: activeGroup});
+  saveFunds(); renderFunds(); fetchFundData(cleanCode);
+  expandedCode=cleanCode; renderFunds();
+  showToast('已添加：'+cleanCode,'success'); closeAddPanel();
+}
+
+// ============ 确认弹窗 ============
+function showConfirm(msg, callback){
+  confirmCallback=callback;
+  document.getElementById('confirmBody').textContent=msg;
+  document.getElementById('confirmModal').classList.add('active');
+}
+function closeConfirmModal(){
+  document.getElementById('confirmModal').classList.remove('active');
+  confirmCallback=null;
+}
+function executeConfirm(){
+  if(confirmCallback) confirmCallback();
+  closeConfirmModal();
+}
+
+// ============ 排序 ============
+function toggleSort(field) {
+  if (sortField === field) sortDir = -sortDir;
+  else { sortField = field; sortDir = -1; }
+  updateSortUI(); renderFunds();
+}
+function updateSortUI() {
+  document.querySelectorAll('.lh-sort').forEach(el => {
+    el.classList.remove('asc','desc');
+    if (el.dataset.field === sortField) el.classList.add(sortDir===1?'asc':'desc');
+  });
+}
+function getSortedFunds() {
+  const base = getGroupFunds();
+  if (!sortField) return base.slice();
+  const arr = base.slice();
+  arr.sort((a,b) => {
+    let va,vb;
+    if (sortField === 'name') {
+      va=(a.name||a.code||'').toLowerCase(); vb=(b.name||b.code||'').toLowerCase();
+    } else if (sortField === 'gszzl') {
+      va=parseFloat(a.gszzl)||0; vb=parseFloat(b.gszzl)||0;
+    } else if (sortField === 'amount') {
+      va=a.amount||0; vb=b.amount||0;
+    } else if (sortField === 'profit') {
+      const pa=calcDisplayProfit(a), pb=calcDisplayProfit(b);
+      va=pa===null?-Infinity:pa; vb=pb===null?-Infinity:pb;
+    }
+    if (va<vb) return -sortDir; if (va>vb) return sortDir; return 0;
+  });
+  return arr;
+}
+
+// ============ 批量 ============
+function openBatchPanel(){document.getElementById('batchPanel').classList.add('active');}
+function closeBatchPanel(){document.getElementById('batchPanel').classList.remove('active');}
+function importBatchFunds(){
+  const ta=document.getElementById('batchInput'), lines=ta.value.trim().split('\n');
+  let added=0, updated=0, errs=[];
+  lines.forEach((line,i)=>{
+    line=line.trim(); if(!line)return;
+    const p=line.split(/\s+/);
+    let code=p[0].replace(/\D/g,'');
+    const amt=parseFloat(p[1])||0;
+    const profit=p.length>=3?parseFloat(p[2]):NaN;
+    // 5位代码前面补0，4位补两个0
+    if(code.length===5) code='0'+code;
+    else if(code.length===4) code='00'+code;
+    if(!/^\d{6}$/.test(code)){errs.push(`第${i+1}行`); return;}
+    const ex=funds.find(f=>f.code===code);
+    if(ex){if(amt>0)ex.amount+=amt; updated++;}
+    else{
+      funds.push({code,name:'',amount:amt,dwjz:'0',gsz:'0',gszzl:'0',gztime:'',jzrq:'',
+                   totalProfit:isNaN(profit)?null:profit,calibrateTime:null,addDate:new Date().toISOString().slice(0,10),
+                   group: activeGroup}); added++;
+    }
+  });
+  if(errs.length){showToast(`错误：${errs.join(',')}`,'warning');}
+  else if(!added&&!updated){showToast('无数据','warning');}
+  else{
+    showToast(`成功：新增${added},更新${updated}`,'success');
+    saveFunds(); renderFunds(); closeBatchPanel(); ta.value=''; refreshAll();
+  }
+}
+
+// ============ 加减仓/修改金额/修改收益 ============
+function addAmount(code, el){
+  const v=parseFloat(el.value); if(isNaN(v)||v<=0){showToast('无效金额','error');return;}
+  const f=funds.find(x=>x.code===code); if(!f)return;
+  f.amount+=v; saveFunds(); renderFunds(); el.value='';
+  showToast(`加仓成功，当前 ${formatMoney(f.amount)}`,'success');
+}
+function minusAmount(code,el){
+  const v=parseFloat(el.value); if(isNaN(v)||v<=0){showToast('无效金额','error');return;}
+  const f=funds.find(x=>x.code===code); if(!f||v>f.amount){showToast('超出持仓','error');return;}
+  showConfirm(`减仓 ${formatMoney(v)}？`,()=>{
+    f.amount-=v;
+    if(f.totalProfit!==null&&f.amount>0)f.totalProfit*=f.amount/(f.amount+v);
+    if(f.amount===0)funds=funds.filter(x=>x.code!==code);
+    saveFunds(); renderFunds(); el.value='';
+  });
+}
+function modifyAmount(code, el){
+  const v=parseFloat(el.value); if(isNaN(v)||v<0){showToast('无效金额','error');return;}
+  const f=funds.find(x=>x.code===code); if(!f)return;
+  f.amount=v; saveFunds(); renderFunds(); el.value='';
+  showToast(`金额已修改为 ${formatMoney(v)}`,'success');
+}
+function modifyProfit(code, el){
+  const v=parseFloat(el.value); if(isNaN(v)){showToast('请输入数值','error');return;}
+  const f=funds.find(x=>x.code===code); if(!f)return;
+  f.totalProfit=v;
+  f.calibrateTime=parseFloat(f.gsz)||parseFloat(f.dwjz)||null;
+  saveFunds(); renderFunds(); el.value='';
+  showToast('收益已修改','success');
+}
+
+function toggleActionPanel(code, type, btn){
+  const types=['group','amount','profit','trade'];
+  const panelId='ap'+type.charAt(0).toUpperCase()+type.slice(1)+'_'+code;
+  const panel=document.getElementById(panelId);
+  const isVisible=panel.style.display!=='none';
+  // 隐藏该基金所有面板
+  types.forEach(t=>{
+    const p=document.getElementById('ap'+t.charAt(0).toUpperCase()+t.slice(1)+'_'+code);
+    if(p) p.style.display='none';
+  });
+  // 移除所有按钮active
+  const btns=btn.parentElement.querySelectorAll('.btn-action');
+  btns.forEach(b=>b.classList.remove('active'));
+  // 切换当前
+  if(!isVisible){
+    panel.style.display='block';
+    btn.classList.add('active');
+  }
+}
+
+// ============ 删除 ============
+function removeFund(code){
+  const idx=funds.findIndex(x=>x.code===code);
+  if(idx<0)return;
+  const name=funds[idx].name||code;
+  showConfirm(`确定删除 ${name}？`,()=>{
+    funds.splice(idx,1); saveFunds(); renderFunds();
+    if(expandedCode===code) expandedCode=null;
+    showToast('已删除','success');
+  });
+}
+function clearAllFunds(){
+  if(!funds.length)return;
+  showConfirm(`清空所有 ${funds.length} 个基金？`,()=>{
+    funds=[]; saveFunds(); renderFunds(); expandedCode=null;
+    showToast('已清空','success');
+  });
+}
+
+// ============ 基金数据获取 ============
+let fundDataSource = localStorage.getItem('fund_monitor_datasource') || 'tiantian';
+
+function switchDataSource() {
+  fundDataSource = fundDataSource === 'tiantian' ? 'sina' : 'tiantian';
+  localStorage.setItem('fund_monitor_datasource', fundDataSource);
+  updateDataSourceMenuItem();
+  updateMoreBtnSource();
+  showToast(`已切换：${fundDataSource === 'tiantian' ? '数据源1' : '数据源2'}`,'success');
+  refreshAll();
+}
+
+function updateDataSourceMenuItem() {
+  const el = document.getElementById('moreDataSourceItem');
+  if (el) el.textContent = `📡 数据源：${fundDataSource === 'tiantian' ? '数据源1' : '数据源2'}`;
+}
+
+function updateMoreBtnSource() {
+  const btn = document.getElementById('moreBtn');
+  if (btn) btn.textContent = '更多';
+}
+
+// 新浪财经数据获取
+function fetchFundDataSina(code){
+  return new Promise(resolve=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('GET',`https://hq.sinajs.cn/list=f_${code}`,true);
+    xhr.setRequestHeader('Referer','https://finance.sina.com.cn/');
+    xhr.onerror=()=>resolve(null);
+    xhr.timeout=8000;
+    xhr.ontimeout=()=>resolve(null);
+    xhr.onload=()=>{
+      if(xhr.status!==200){resolve(null);return;}
+      const txt=xhr.responseText||'';
+      const m=txt.match(/"([^"]+)"/);
+      if(!m){resolve(null);return;}
+      const parts=m[1].split(',');
+      // parts: [name, dwjz(昨收净值), ljjz(累计净值), gsz(当日估算净值), date, gszzl_raw]
+      if(!parts||parts.length<6){resolve(null);return;}
+      const name=parts[0]||('');
+      const dwjz=parts[1]||'0'; // 单位净值（上一交易日）
+      const ljjz=parts[2]||'0';
+      const gsz=parts[3]||'0'; // 当日估算净值
+      const jzrq=parts[4]||'';
+      const rawChange=parts[5]||'0';
+      // 估算涨跌幅：新浪直接返回百分比数值（如 0.39 表示 0.39%）
+      let gszzl='0';
+      try {
+        const pct=parseFloat(rawChange);
+        if(!isNaN(pct)) gszzl=pct.toFixed(2);
+      } catch(e){}
+      const data={
+        fundcode:code,
+        name:name,
+        dwjz:dwjz,
+        gsz:gsz,
+        gszzl:gszzl,
+        gztime:jzrq?`${jzrq} ${new Date().toTimeString().slice(0,5)}`:'',
+        jzrq:jzrq
+      };
+      // 更新本地基金数据
+      const f=funds.find(x=>x.code===code);
+      if(f){
+        f.name=name||('基金'+code);
+        f.dwjz=dwjz||f.dwjz||'0';
+        f.gsz=gsz||f.gsz||'0';
+        f.gszzl=gszzl||f.gszzl||'0';
+        f.gztime=data.gztime||f.gztime||'';
+        f.jzrq=jzrq||f.jzrq||'';
+        // 自动校准：如果有收益记录但没有校准基准，用当前单位净值作为基准
+        if(f.totalProfit!==null && f.calibrateTime===null){
+          f.calibrateTime=parseFloat(f.dwjz)||null;
+        }
+        saveFunds();
+      }
+      resolve(data);
+    };
+    xhr.send();
+  });
+}
+
+function fetchFundData(code){
+  if(fundDataSource==='sina') return fetchFundDataSina(code);
+  return fetchFundDataTiantian(code);
+}
+
+function fetchFundDataTiantian(code){
+  return new Promise(resolve=>{
+    let resolved=false;
+    const cb='jp_cb_'+code+'_'+Date.now(), sc=document.createElement('script');
+    const t=setTimeout(()=>{cleanup();doResolve(null);},8000);
+    function cleanup(){clearTimeout(t);delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}
+    function doResolve(val){if(!resolved){resolved=true;resolve(val);}}
+    window[cb]=data=>{
+      cleanup();
+      if(data&&data.fundcode){
+        const f=funds.find(x=>x.code===data.fundcode);
+        if(f){
+          let n=data.name||'';
+          try{if(n&&/[^\u4e00-\u9fa5a-zA-Z0-9\u00b7\-()（）]/.test(n))n='';}catch(e){}
+          f.name=n||('基金'+data.fundcode);
+          // QDII且已更新：保留确认数据，不被fundgz旧估算覆盖
+          if(f.isQDII && f._updated){
+            f.dwjz=data.dwjz||f.dwjz||'0';
+            f.jzrq=data.jzrq||f.jzrq||'';
+            // 不覆盖gsz/gszzl/gztime，保留FundBase的确认数据
+          }else{
+            f.dwjz=data.dwjz||'0'; f.gsz=data.gsz||'0'; f.gszzl=data.gszzl||'0';
+            f.gztime=data.gztime||''; f.jzrq=data.jzrq||'';
+          }
+          // 自动校准：如果有收益记录但没有校准基准，用当前单位净值作为基准
+          if(f.totalProfit!==null && f.calibrateTime===null){
+            f.calibrateTime=parseFloat(f.dwjz)||null;
+          }
+          saveFunds();
+        }
+      }
+      // 调用FundBase获取最新净值，等待完成后再resolve
+      fetchFundBaseTiantian(code).then(()=>{
+        doResolve(data);
+      });
+    };
+    const o=window.jsonpgz;
+    window.jsonpgz=d=>window[cb](d);
+    sc.src=`https://fundgz.1234567.com.cn/js/${code}.js?rt=${Date.now()}`;
+    sc.onerror=()=>{cleanup();window.jsonpgz=o;doResolve(null);};
+    document.head.appendChild(sc);
+  });
+}
+
+// 天天基金FundBase接口 - 获取最新净值（解决QDII数据滞后问题）
+// 使用JSONP方式绕过CORS限制
+function fetchFundBaseTiantian(code){
+  return new Promise(resolve=>{
+    const cb='fb_cb_'+code+'_'+Date.now();
+    const sc=document.createElement('script');
+    const t=setTimeout(()=>{cleanup();resolve(null);},6000);
+    function cleanup(){clearTimeout(t);delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}
+    window[cb]=resp=>{
+      cleanup();
+      try{
+        if(!resp||!resp.Datas){resolve(null);return;}
+        const d=resp.Datas;
+        const latestNav=d.DWJZ;
+        const latestDate=d.FSRQ;
+        const latestChange=d.RZDF;
+        const isQDII=d.FTYPE&&d.FTYPE.indexOf('QDII')>=0;
+        if(!latestNav||!latestDate){resolve(null);return;}
+        const f=funds.find(x=>x.code===code);
+        if(!f){resolve(null);return;}
+
+        const now=new Date();
+        const hour=now.getHours();
+        const isAfterClose=hour>=15; // 收盘后
+
+        // 判断FundBase的净值日期是否比当前存储的净值日期更新
+        const currentDate=f.jzrq||'';
+        const needUpdate=latestDate>currentDate;
+
+        if(isQDII){
+          f.isQDII=true;
+          if(needUpdate){
+            // QDII：FundBase返回更新的确认净值 → 用确认数据覆盖
+            f.dwjz=latestNav;
+            f.jzrq=latestDate;
+            if(latestChange!==undefined&&latestChange!==''){
+              f.gszzl=String(latestChange);
+            }
+            f.gsz=latestNav;
+            f.gztime=latestDate;
+          }
+          // QDII：FundBase成功返回数据即表示确认净值已公布
+          f._updated=true;
+        }else if(isAfterClose && needUpdate){
+          // 收盘后A股：FundBase有更新的确认净值 → 用确认数据覆盖盘中估算
+          f.dwjz=latestNav;
+          f.jzrq=latestDate;
+          if(latestChange!==undefined&&latestChange!==''){
+            f.gszzl=String(latestChange);
+          }
+          f.gsz=latestNav;
+          f.gztime=latestDate;
+        }
+
+        saveFunds();
+        renderFunds();
+        resolve({nav:latestNav,date:latestDate,change:latestChange});
+      }catch(e){resolve(null);}
+    };
+    sc.src=`https://fundmobapi.eastmoney.com/FundMApi/FundBase.ashx?FCODE=${code}&deviceid=web&plat=Android&product=EFund&version=6.3.8&callback=${cb}`;
+    sc.onerror=()=>{cleanup();resolve(null);};
+    document.head.appendChild(sc);
+  });
+}
+
+// ============ 收盘后自动校准 ============
+function fetchActualNav(code){
+  return new Promise(resolve=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('GET',`https://hq.sinajs.cn/list=f_${code}`,true);
+    xhr.setRequestHeader('Referer','https://finance.sina.com.cn/');
+    xhr.onerror=()=>resolve(null);
+    xhr.timeout=8000;
+    xhr.ontimeout=()=>resolve(null);
+    xhr.onload=()=>{
+      if(xhr.status!==200){resolve(null);return;}
+      const txt=xhr.responseText||'';
+      const m=txt.match(/"([^"]+)"/);
+      if(!m){resolve(null);return;}
+      const parts=m[1].split(',');
+      if(!parts||parts.length<4){resolve(null);return;}
+      const name=parts[0]||'';
+      const dwjz=parts[1]||'0';
+      const gsz=parts[3]||'0';
+      const jzrq=parts[4]||'';
+      resolve({name,dwjz,gsz,jzrq});
+    };
+    xhr.send();
+  });
+}
+
+async function autoCalibrate(){
+  if(!funds.length)return;
+  const now=new Date();
+  const hour=now.getHours();
+  const minute=now.getMinutes();
+  // 只在收盘后（15:00之后）校准
+  if(hour<15)return;
+
+  let calibrated=0;
+  for(const f of funds){
+    const data=await fetchActualNav(f.code);
+    if(data&&data.gsz&&data.gsz!=='0'){
+      const actualNav=parseFloat(data.gsz);
+      const estimateNav=parseFloat(f.gsz)||parseFloat(f.dwjz)||0;
+      if(actualNav>0&&estimateNav>0){
+        const deviation=((actualNav-estimateNav)/estimateNav*100).toFixed(2);
+        f.dwjz=data.dwjz;
+        f.jzrq=data.jzrq;
+        f.navDeviation=deviation;
+        calibrated++;
+      }
+    }
+  }
+  if(calibrated>0){
+    saveFunds();
+    renderFunds();
+    showToast(`收盘校准完成：${calibrated}只基金`,'success');
+  }
+}
+
+// ============ 指数基金指数验证 ============
+const fundIndexMap={
+  '161725':'sz399997', // 招商中证白酒 → 中证白酒
+  '001186':'sz399006', // 富国文体健康 → 创业板指（示例）
+};
+
+function fetchIndexQuote(indexCode){
+  return new Promise(resolve=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('GET',`https://qt.gtimg.cn/q=${indexCode}`,true);
+    xhr.onerror=()=>resolve(null);
+    xhr.timeout=8000;
+    xhr.ontimeout=()=>resolve(null);
+    xhr.onload=()=>{
+      if(xhr.status!==200){resolve(null);return;}
+      const txt=xhr.responseText||'';
+      const m=txt.match(/"([^"]+)"/);
+      if(!m){resolve(null);return;}
+      const parts=m[1].split('~');
+      if(!parts||parts.length<6){resolve(null);return;}
+      const name=parts[1]||'';
+      const latest=parseFloat(parts[3])||0;
+      const prev=parseFloat(parts[4])||0;
+      const change=prev>0?((latest-prev)/prev*100).toFixed(2):'0.00';
+      resolve({name,latest,prev,change});
+    };
+    xhr.send();
+  });
+}
+
+async function renderIndexReference(code,container){
+  const indexCode=fundIndexMap[code];
+  if(!indexCode)return;
+  const data=await fetchIndexQuote(indexCode);
+  if(!data)return;
+
+  const fund=funds.find(x=>x.code===code);
+  if(!fund)return;
+
+  const fundChange=parseFloat(fund.gszzl)||0;
+  const indexChange=parseFloat(data.change)||0;
+  const diff=(fundChange-indexChange).toFixed(2);
+  const diffClass=Math.abs(diff)>0.5?'warning':'';
+
+  container.innerHTML=`<div class="index-ref ${diffClass}">
+    <div class="index-ref-title">${data.name} 参考</div>
+    <div class="index-ref-row">
+      <span>指数涨跌：${indexChange>0?'+':''}${indexChange}%</span>
+      <span>基金估算：${fundChange>0?'+':''}${fundChange.toFixed(2)}%</span>
+      <span class="index-diff">偏差：${diff>0?'+':''}${diff}%</span>
+    </div>
+    ${Math.abs(diff)>0.5?'<div class="index-warning">估算与指数偏差较大，仅供参考</div>':''}
+  </div>`;
+}
+
+// ============ 基金历史净值（用于折线图） ============
+function fetchFundHistory(code){
+  return new Promise(resolve=>{
+    if(funds.find(x=>x.code===code)?.history){
+      resolve(funds.find(x=>x.code===code).history); return;
+    }
+    const sc=document.createElement('script');
+    const t=setTimeout(()=>{cleanup();resolve(null);},8000);
+    function cleanup(){clearTimeout(t);if(sc.parentNode)sc.parentNode.removeChild(sc);}
+    sc.onload=()=>{
+      cleanup();
+      try{
+        const trend=window.Data_netWorthTrend;
+        if(Array.isArray(trend)&&trend.length){
+          const f=funds.find(x=>x.code===code);
+          if(f) f.history=trend;
+          // 清理全局变量
+          delete window.Data_netWorthTrend;
+          delete window.Data_fundSharesPositions;
+          delete window.fS_name; delete window.fS_code;
+          resolve(trend);
+        }else{resolve(null);}
+      }catch(e){resolve(null);}
+    };
+    sc.onerror=()=>{cleanup();resolve(null);};
+    sc.src=`https://fund.eastmoney.com/pingzhongdata/${code}.js`;
+    document.head.appendChild(sc);
+  });
+}
+
+// ============ 画净值折线图 ============
+function drawTrendChart(canvas,data,period){
+  if(!canvas||!data||!data.length)return;
+  period=period||parseInt(canvas.dataset.period)||30;
+  const sliceCount=Math.min(period,data.length);
+  const ctx=canvas.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  canvas.width=rect.width*dpr; canvas.height=rect.height*dpr;
+  ctx.scale(dpr,dpr);
+  const w=rect.width,h=rect.height;
+  const pad={top:8,right:8,bottom:20,left:38};
+  const cw=w-pad.left-pad.right,ch=h-pad.top-pad.bottom;
+  const recent=data.slice(-sliceCount);
+  const vals=recent.map(d=>d.y);
+  const min=Math.min(...vals),max=Math.max(...vals);
+  const range=max-min||1;
+  const isUp=recent[recent.length-1].y>=recent[0].y;
+  const color=isUp?'#f5222d':'#52c41a';
+
+  ctx.clearRect(0,0,w,h);
+
+  // 网格线
+  ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad.top+ch*i/4;
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cw,y);ctx.stroke();
+  }
+
+  // 折线
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.beginPath();
+  recent.forEach((d,i)=>{
+    const x=pad.left+cw*i/(recent.length-1);
+    const y=pad.top+ch*(1-(d.y-min)/range);
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // 填充
+  ctx.fillStyle=isUp?'rgba(245,34,45,0.06)':'rgba(82,196,26,0.06)';
+  ctx.lineTo(pad.left+cw,pad.top+ch);
+  ctx.lineTo(pad.left,pad.top+ch);
+  ctx.closePath();ctx.fill();
+
+  // Y轴标签
+  ctx.fillStyle='#999';ctx.font='10px sans-serif';
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let i=0;i<=4;i++){
+    const v=max-range*i/4;
+    ctx.fillText(v.toFixed(3),pad.left-6,pad.top+ch*i/4);
+  }
+
+  // X轴标签
+  ctx.textAlign='center';ctx.textBaseline='top';
+  const step=Math.ceil(recent.length/4);
+  recent.forEach((d,i)=>{
+    if(i%step===0||i===recent.length-1){
+      const x=pad.left+cw*i/(recent.length-1);
+      const date=new Date(d.x);
+      const label=`${date.getMonth()+1}/${date.getDate()}`;
+      ctx.fillText(label,x,pad.top+ch+4);
+    }
+  });
+}
+
+function renderTrendCharts(){
+  document.querySelectorAll('.trend-chart').forEach(async canvas=>{
+    const code=canvas.dataset.code;if(!code)return;
+    const period=parseInt(canvas.dataset.period)||30;
+    const data=await fetchFundHistory(code);
+    if(data) drawTrendChart(canvas,data,period);
+  });
+}
+
+function renderIndexReferences(){
+  document.querySelectorAll('.index-ref').forEach(async el=>{
+    const code=el.id.replace('indexRef_','');
+    if(!code||!fundIndexMap[code]){el.style.display='none';return;}
+    el.style.display='block';
+    await renderIndexReference(code,el);
+  });
+}
+
+function switchChartPeriod(code,period,btn){
+  const canvas=document.querySelector(`.trend-chart[data-code="${code}"]`);
+  if(!canvas)return;
+  canvas.dataset.period=period;
+  const tabs=btn.parentElement.querySelectorAll('.chart-tab');
+  tabs.forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const fund=funds.find(f=>f.code===code);
+  if(fund&&fund.history) drawTrendChart(canvas,fund.history,period);
+}
+
+// ============ 指数数据获取 ============
+function fetchIndices(){
+  if(!selectedIndices.length) return;
+  const codes=selectedIndices.map(c=>{const info=allIndices.find(i=>i.code===c);return info?info.tencent:c;}).join(',');
+  const sc=document.createElement('script');
+  sc.src=`https://qt.gtimg.cn/q=${codes}`;
+  sc.onload=()=>{
+    selectedIndices.forEach(code=>{
+      const info=allIndices.find(i=>i.code===code);
+      const tcode=info?info.tencent:code;
+      const key='v_'+tcode;
+      const data=window[key];
+      if(data&&typeof data==='string'){
+        const parts=data.split('~');
+        if(parts.length>=5){
+          const name=parts[1], price=parseFloat(parts[3]), prev=parseFloat(parts[4]);
+          if(!isNaN(price)&&!isNaN(prev)){
+            const chg=((price-prev)/prev*100);
+            indexDataCache[code]={name,price,prev,chg};
+          }
+        }
+      }
+    });
+    renderIndices();
+    if(sc.parentNode)sc.parentNode.removeChild(sc);
+  };
+  sc.onerror=()=>{if(sc.parentNode)sc.parentNode.removeChild(sc);};
+  document.head.appendChild(sc);
+}
+
+// ============ 指数渲染与弹窗 ============
+function renderIndices(){
+  const container=document.getElementById('indexCards');
+  if(!selectedIndices.length){container.innerHTML='';return;}
+  let html='';
+  selectedIndices.forEach(code=>{
+    const info=allIndices.find(i=>i.code===code);
+    const data=indexDataCache[code];
+    const name=info?info.name:(data?data.name:code);
+    if(data){
+      const isUp=data.chg>=0, cls=isUp?'up':'down', sign=isUp?'+':'-';
+      html+=`<div class="index-card ${cls}" onclick="openIndexModal()">
+        <div class="index-name">${name}</div>
+        <div class="index-value">${data.price.toFixed(2)}</div>
+        <div class="index-change ${cls}">${sign}${Math.abs(data.chg).toFixed(2)}%</div>
+      </div>`;
+    } else {
+      html+=`<div class="index-card" onclick="openIndexModal()">
+        <div class="index-name">${name}</div>
+        <div class="index-value">--</div>
+        <div class="index-change">--</div>
+      </div>`;
+    }
+  });
+  container.innerHTML=html;
+}
+function openIndexModal(){
+  const body=document.getElementById('indexOptions');
+  let html='';
+  allIndices.forEach(idx=>{
+    const checked=selectedIndices.includes(idx.code)?'checked':'';
+    html+=`<label class="index-option">
+      <input type="checkbox" value="${idx.code}" ${checked} onchange="onIndexCheck(this)">
+      <span class="io-name">${idx.name}</span>
+      <span class="io-code">${idx.code}</span>
+    </label>`;
+  });
+  body.innerHTML=html;
+  document.getElementById('indexModal').classList.add('active');
+}
+function closeIndexModal(){document.getElementById('indexModal').classList.remove('active');}
+function onIndexCheck(el){
+  const val=el.value;
+  if(el.checked){
+    if(selectedIndices.length>=3){el.checked=false;showToast('最多选择3个指数','warning');}
+    else selectedIndices.push(val);
+  } else {
+    selectedIndices=selectedIndices.filter(c=>c!==val);
+  }
+}
+function saveIndexSelection(){
+  saveIndices(); closeIndexModal(); fetchIndices(); showToast('已保存','success');
+}
+
+// ============ 计算收益 ============
+function calcDisplayProfit(fund){
+  if(fund.totalProfit===null)return null;
+  const gsz=parseFloat(fund.gsz)||0;
+  if(fund.calibrateTime&&fund.calibrateTime>0&&gsz>0){
+    const chg=(gsz-fund.calibrateTime)/fund.calibrateTime;
+    return fund.totalProfit+fund.amount*chg;
+  }
+  return fund.totalProfit;
+}
+function calcDisplayRate(profit,amount){
+  if(profit===null||amount<=0)return null;
+  const cost=amount-profit;
+  if(cost>0)return profit/cost*100;
+  return amount>0?999.99:0;
+}
+function daysBetween(d1,d2){
+  if(!d1||!d2)return'--';
+  const a=new Date(d1),b=new Date(d2);
+  return Math.max(0,Math.floor((b-a)/(86400000)));
+}
+
+// ============ 列宽拖拽 ============
+let resizingCol = null, resizeStartX = 0, resizeStartW = 0;
+function initResizeHandles() {
+  document.querySelectorAll('.resize-handle').forEach(h => {
+    h.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      resizingCol = parseInt(h.dataset.col);
+      resizeStartX = e.clientX;
+      resizeStartW = columns[resizingCol].width;
+      h.classList.add('resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+  });
+}
+document.addEventListener('mousemove', e => {
+  if (resizingCol === null) return;
+  const dx = e.clientX - resizeStartX;
+  const newW = Math.max(60, resizeStartW + dx);
+  columns[resizingCol].width = newW;
+  applyGridTemplate();
+});
+document.addEventListener('mouseup', () => {
+  if (resizingCol !== null) {
+    document.querySelectorAll('.resize-handle').forEach(h => h.classList.remove('resizing'));
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    resizingCol = null;
+    saveColumns();
+  }
+});
+function applyGridTemplate() {
+  const gt = getGridTemplate();
+  const lh = document.getElementById('listHeader');
+  const fm = document.querySelectorAll('.fund-main');
+  if (lh) lh.style.gridTemplateColumns = gt;
+  fm.forEach(el => el.style.gridTemplateColumns = gt);
+}
+
+// ============ 列顺序拖拽 ============
+let dragColField = null;
+function initColDrag() {
+  document.querySelectorAll('.list-header .lh-cell').forEach(cell => {
+    const field = cell.dataset.field;
+    if (field === '_arrow') {
+      // 箭头列不参与任何拖拽交互
+      cell.addEventListener('dragover', e => e.preventDefault());
+      return;
+    }
+    cell.draggable = true;
+    cell.addEventListener('dragstart', e => {
+      dragColField = field;
+      cell.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    cell.addEventListener('dragend', () => {
+      cell.classList.remove('dragging');
+      document.querySelectorAll('.list-header .lh-cell').forEach(c => c.classList.remove('drag-over'));
+      dragColField = null;
+    });
+    cell.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!dragColField || dragColField === field) return;
+      cell.classList.add('drag-over');
+    });
+    cell.addEventListener('dragleave', () => {
+      cell.classList.remove('drag-over');
+    });
+    cell.addEventListener('drop', e => {
+      e.preventDefault();
+      cell.classList.remove('drag-over');
+      if (!dragColField || dragColField === field) return;
+      let fromIdx = columns.findIndex(c => c.field === dragColField);
+      let toIdx = columns.findIndex(c => c.field === field);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const [moved] = columns.splice(fromIdx, 1);
+      if (toIdx > fromIdx) toIdx--;
+      columns.splice(toIdx, 0, moved);
+      // 确保箭头列始终在最后
+      const arrowIdx = columns.findIndex(c => c.field === '_arrow');
+      if (arrowIdx >= 0 && arrowIdx !== columns.length - 1) {
+        const [arrow] = columns.splice(arrowIdx, 1);
+        columns.push(arrow);
+      }
+      saveColumns();
+      renderFunds();
+    });
+  });
+}
+
+// ============ 恢复默认布局 ============
+function resetLayout() {
+  columns = JSON.parse(JSON.stringify(defaultColumns));
+  saveColumns();
+  renderFunds();
+  showToast('已恢复默认布局','success');
+}
+
+// ============ 渲染 ============
+function renderFunds(){
+  const container=document.getElementById('fundList');
+  const summaryBar=document.getElementById('summaryBar');
+  const listHeader=document.getElementById('listHeader');
+
+  renderGroupTabs();
+  const displayFunds = getSortedFunds();
+
+  if(!displayFunds.length){
+    summaryBar.style.display='none';
+    listHeader.style.display='none';
+    container.innerHTML=`<div class="empty-state"><div class="icon">📈</div><div class="text">${activeGroup===groups[0]?'添加基金开始监控':'该分组暂无基金'}</div></div>`;
+    return;
+  }
+  summaryBar.style.display='flex';
+  listHeader.style.display='grid';
+
+  // 渲染表头
+  const gt = getGridTemplate();
+  listHeader.style.gridTemplateColumns = gt;
+  let headerHtml = '';
+  columns.forEach((col, idx) => {
+    if (col.field === '_arrow') {
+      headerHtml += `<div class="lh-cell align-center"></div>`;
+      return;
+    }
+    const sortClass = col.sortable ? 'lh-sort' : '';
+    const activeClass = sortField === col.field ? (sortDir === 1 ? 'asc' : 'desc') : '';
+    const alignClass = col.align === 'right' ? 'align-right' : col.align === 'center' ? 'align-center' : '';
+    headerHtml += `<div class="lh-cell ${sortClass} ${activeClass} ${alignClass}" data-field="${col.field}" onclick="toggleSort('${col.field}')">
+      ${col.title}
+      <span class="resize-handle" data-col="${idx}"></span>
+    </div>`;
+  });
+  listHeader.innerHTML = headerHtml;
+
+  let sumInvest=0,sumPToday=0,sumPTotal=0;
+  let html='';
+
+  displayFunds.forEach(fund=>{
+    const dwjz=parseFloat(fund.dwjz)||0,gsz=parseFloat(fund.gsz)||0,gszzl=parseFloat(fund.gszzl)||0;
+    const amt=fund.amount||0,name=fund.name||('基金'+fund.code);
+    const isUp=gszzl>0,isDown=gszzl<0,cc=isUp?'up':isDown?'down':'';
+
+    // QDII基金：只有FundBase更新后才计算市值变动，否则显示原始金额
+    const isQDII=fund.isQDII===true;
+    const hasUpdated=fund._updated===true;
+    const useMarketVal=!isQDII || hasUpdated;
+    const todayP=useMarketVal ? amt*gszzl/100 : 0;
+    const marketVal=useMarketVal ? amt+todayP : amt;
+
+    const dProfit=useMarketVal ? calcDisplayProfit(fund) : (fund.totalProfit!==null ? fund.totalProfit : null);
+    const dRate=calcDisplayRate(dProfit,amt);
+    const pc=dProfit!==null?(dProfit>0?'up':dProfit<0?'down':''):'';
+    const rc=dRate!==null?(dRate>0?'up':dRate<0?'down':''):'';
+
+    sumInvest+=marketVal; sumPToday+=todayP; if(dProfit!==null)sumPTotal+=dProfit;
+
+    const isExp=(expandedCode===fund.code);
+    const rowClass = isUp ? 'up' : isDown ? 'down' : '';
+
+    // 已更新：净值日期等于今天，表示当天净值已公布（确定数据）
+    const today = new Date().toISOString().slice(0,10);
+    const isUpdated = (fund.jzrq === today);
+    const updatedTag = isUpdated ? '<span class="updated-tag">已更新</span>' : '';
+
+    // 动态生成主行各列
+    let colsHtml = '';
+    columns.forEach(col => {
+      if (col.field === 'name') {
+        colsHtml += `<div class="fm-name">
+          <div class="fm-fundname">${name}</div>
+          ${updatedTag}
+          <div class="fm-amount-val">${formatMoney(marketVal)}</div>
+        </div>`;
+      } else if (col.field === 'gszzl') {
+        colsHtml += `<div class="fm-today">
+          <div class="fm-change ${cc}">${isUp?'+':'-'}${Math.abs(gszzl).toFixed(2)}%</div>
+          <div class="fm-profit ${cc}">${todayP>=0?'+':'-'}${formatMoney(Math.abs(todayP))}</div>
+        </div>`;
+      } else if (col.field === 'amount') {
+        colsHtml += `<div class="fm-rate">
+          <div class="fm-rate-val ${cc}">${isUp?'+':'-'}${Math.abs(gszzl).toFixed(2)}%</div>
+        </div>`;
+      } else if (col.field === 'profit') {
+        colsHtml += `<div class="fm-total">
+          ${dProfit!==null
+            ? `<div class="fm-total-val ${pc}">${dProfit>=0?'+':''}${formatMoney(dProfit)}</div>
+               <div class="fm-total-rate ${rc}">${dRate>=0?'+':''}${dRate.toFixed(2)}%</div>`
+            : `<div class="fm-total-val pending">未校准</div>
+               <div class="fm-total-rate pending">--</div>`}
+        </div>`;
+      } else if (col.field === '_arrow') {
+        colsHtml += `<div class="fm-arrow"></div>`;
+      }
+    });
+
+    html+=`<div class="fund-row ${isExp?'expanded':''} ${rowClass}">
+      <div class="fund-main" onclick="toggleExpand('${fund.code}')" style="grid-template-columns:${gt}">
+        ${colsHtml}
+      </div>
+      <div class="fund-detail">
+        <div class="detail-inner">
+          <div class="detail-main">
+            <div class="index-ref" id="indexRef_${fund.code}" style="display:none;"></div>
+            <canvas class="trend-chart" data-code="${fund.code}" data-period="30"></canvas>
+            <div class="detail-controls">
+              <div class="chart-tabs-inline">
+                <div class="chart-tabs">
+                  <button class="chart-tab active" onclick="switchChartPeriod('${fund.code}',30,this)">1月</button>
+                  <button class="chart-tab" onclick="switchChartPeriod('${fund.code}',90,this)">3月</button>
+                  <button class="chart-tab" onclick="switchChartPeriod('${fund.code}',180,this)">6月</button>
+                  <button class="chart-tab" onclick="switchChartPeriod('${fund.code}',365,this)">1年</button>
+                  <button class="chart-tab" onclick="switchChartPeriod('${fund.code}',1095,this)">3年</button>
+                </div>
+              </div>
+              <div class="action-btns">
+                <button class="btn-action" onclick="toggleActionPanel('${fund.code}','group',this)">所属分组</button>
+                <button class="btn-action" onclick="toggleActionPanel('${fund.code}','amount',this)">修改持仓</button>
+                <button class="btn-action" onclick="toggleActionPanel('${fund.code}','profit',this)">修改收益</button>
+                <button class="btn-action" onclick="toggleActionPanel('${fund.code}','trade',this)">加减仓</button>
+              </div>
+              <div class="action-panel" id="apGroup_${fund.code}" style="display:none;">
+                <select class="group-select" onchange="setFundGroup('${fund.code}',this.value)">
+                  ${groups.map(g => `<option value="${g}" ${(fund.group===g || (!fund.group && g===groups[0]))?'selected':''}>${g}</option>`).join('')}
+                </select>
+              </div>
+              <div class="action-panel" id="apAmount_${fund.code}" style="display:none;">
+                <div class="edit-group">
+                  <input type="number" placeholder="新金额" step="0.01" min="0">
+                  <button class="btn-edit" onclick="modifyAmount('${fund.code}',this.previousElementSibling)">修改</button>
+                </div>
+              </div>
+              <div class="action-panel" id="apProfit_${fund.code}" style="display:none;">
+                <div class="edit-group">
+                  <input type="number" placeholder="新收益" step="0.01">
+                  <button class="btn-edit" onclick="modifyProfit('${fund.code}',this.previousElementSibling)">修改</button>
+                </div>
+              </div>
+              <div class="action-panel" id="apTrade_${fund.code}" style="display:none;">
+                <div class="ops-row">
+                  <input type="number" placeholder="金额" step="0.01" min="0" class="op-input">
+                  <button class="btn-op btn-op-add" onclick="addAmount('${fund.code}',this.previousElementSibling)">加仓</button>
+                  <button class="btn-op btn-op-minus" onclick="minusAmount('${fund.code}',this.previousElementSibling.previousElementSibling)">减仓</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-info-bar">
+          <div class="detail-info-left">
+            <span class="detail-info-code">${fund.code}</span>
+            <span class="detail-info-time">${fund.gztime||'-'}</span>
+          </div>
+          <button class="btn-op btn-op-del plain" onclick="removeFund('${fund.code}')">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML=html;
+
+  // 绘制展开基金的折线图
+  renderTrendCharts();
+  renderIndexReferences();
+
+  // 初始化拖拽
+  initResizeHandles();
+  initColDrag();
+
+  const c1=sumPToday>0?'up':sumPToday<0?'down':'flat';
+  const c2=sumPTotal>0?'up':sumPTotal<0?'down':'flat';
+  const r=sumInvest>0?sumPTotal/sumInvest*100:0,c3=r>0?'up':r<0?'down':'flat';
+
+  // 计算所有分组的总计
+  let allInvest=0,allPToday=0,allPTotal=0;
+  funds.forEach(f=>{
+    const amt=f.amount||0;
+    const gszzl=parseFloat(f.gszzl)||0;
+    const todayP=amt*gszzl/100;
+    const dProfit=calcDisplayProfit(f);
+    allInvest+=amt; allPToday+=todayP; if(dProfit!==null)allPTotal+=dProfit;
+  });
+  const ar=allInvest>0?allPTotal/allInvest*100:0;
+
+  const isAllView = activeGroup === groups[0];
+  const showCount = isAllView ? funds.filter(f=>!f.group||f.group===groups[0]).length : displayFunds.length;
+  const showInvest = isAllView ? allInvest : sumInvest;
+  const showPToday = isAllView ? allPToday : sumPToday;
+  const showPTotal = isAllView ? allPTotal : sumPTotal;
+  const showRate = isAllView ? ar : r;
+
+  const cc1=showPToday>0?'up':showPToday<0?'down':'flat';
+  const cc2=showPTotal>0?'up':showPTotal<0?'down':'flat';
+  const cc3=showRate>0?'up':showRate<0?'down':'flat';
+
+  document.getElementById('sumCount').textContent=showCount;
+  document.getElementById('sumInvest').textContent=formatMoney(showInvest+showPToday);
+  document.getElementById('sumProfitToday').textContent=(showPToday>=0?'+':'-')+formatMoney(Math.abs(showPToday));
+  document.getElementById('sumProfitToday').className='value '+cc1;
+  document.getElementById('sumProfitTotal').textContent=(showPTotal>=0?'+':'-')+formatMoney(Math.abs(showPTotal));
+  document.getElementById('sumProfitTotal').className='value '+cc2;
+  document.getElementById('sumProfitRate').textContent=(showRate>=0?'+':'-')+Math.abs(showRate).toFixed(2)+'%';
+  document.getElementById('sumProfitRate').className='value '+cc3;
+}
+
+function formatMoney(n){
+  if(isNaN(n))return'0.00';
+  return Math.abs(n).toFixed(2);
+}
+
+// ============ 展开 ============
+function toggleExpand(code){
+  expandedCode=(expandedCode===code)?null:code;
+  renderFunds();
+}
+
+// ============ Toast ============
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(type||'')+' show';
+  setTimeout(()=>{t.className='toast';},2500);
+}
+
+// ============ 刷新 ============
+async function refreshAll(silent){
+  if(!funds.length)return;
+  if(!silent)document.getElementById('updateTime').textContent='刷新中...';
+  // 清除所有基金的已更新标记，只在本次刷新真正更新数据时重新标记
+  funds.forEach(f=>{f._updated=false;});
+  for(const f of funds)await fetchFundData(f.code);
+  renderFunds();
+  const n=new Date();
+  document.getElementById('updateTime').textContent=`最后更新：${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+}
+function pad(n){return String(n).padStart(2,'0');}
+
+// ============ 自动刷新 ============
+function toggleAutoRefresh(){
+  isAutoRefresh=!isAutoRefresh;
+  const m=document.getElementById('moreAutoRefreshItem');
+  if(isAutoRefresh){
+    if(m)m.textContent='⏸ 停止自动刷新';
+    refreshAll(); autoRefreshTimer=setInterval(()=>refreshAll(),30000);
+    showToast('自动刷新已开启（30秒）','success');
+  }else{
+    if(m)m.textContent='⏱ 自动刷新';
+    clearInterval(autoRefreshTimer); autoRefreshTimer=null;
+    showToast('自动刷新已关闭','warning');
+  }
+}
+
+// ============ 事件 ============
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(e.target.id==='addCode'||e.target.id==='addAmount'||e.target.id==='addProfit')submitAddFund();
+  }
+  if(e.key==='Escape'){
+    closeBatchPanel(); closeAddPanel(); closeIndexModal(); closeMoreMenu(); closeConfirmModal();
+  }
+});
+document.addEventListener('click',e=>{
+  const moreWrap=document.querySelector('.more-wrap');
+  if(moreWrap&&!moreWrap.contains(e.target))closeMoreMenu();
+});
+
+// 启动
+loadColumns();
+loadStorage();
+updateDataSourceMenuItem();
+updateMoreBtnSource();
+updateSortUI();
+renderFunds();
+fetchIndices();
+if(funds.length)refreshAll(true);
+// 自动刷新默认开启
+if(isAutoRefresh){
+  const m=document.getElementById('moreAutoRefreshItem');
+  if(m)m.textContent='⏸ 停止自动刷新';
+  autoRefreshTimer=setInterval(()=>refreshAll(),30000);
+}
+
+// 每天15:05自动校准
+setInterval(()=>{
+  const now=new Date();
+  if(now.getHours()===15&&now.getMinutes()===5){
+    autoCalibrate();
+  }
+},60000);
+
+// 启动时也检查是否需要校准
+setTimeout(()=>{
+  const now=new Date();
+  if(now.getHours()>=15) autoCalibrate();
+},5000);
+
+// 分组 ESC 关闭
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeGroupModal();
+});
+</script>
+</body>
+</html>
